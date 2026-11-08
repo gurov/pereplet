@@ -54,6 +54,7 @@ npm run gallery        # gallery/out/ — галерея всех вариант
 node scripts/dev.mjs   # сборка для gallery/dev.html (?style=cloth,marble&n=10&big=1)
 npm run fonts -- <папка с TTF>  # шрифты: подмножество → fonts/, таблица ширин → src/metrics.ts
 node scripts/wada.mjs  # палитры Вады → src/wada.ts (из пакета dictionary-of-colour-combinations)
+scripts/publish.sh <код 2FA>  # выпуск в npm (токен — ~/.config/npm-token, проверки — prepublishOnly)
 ```
 
 Устройство: `src/index.ts` — выбор стиля и конвейер; `src/cover.ts` — корешок, фактуры, потёртости, раскладка
