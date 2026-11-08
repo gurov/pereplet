@@ -9,6 +9,10 @@
     "type": "git",
     "url": "git+https://github.com/gurov/pereplet.git"
   },
+  "homepage": "https://github.com/gurov/pereplet#readme",
+  "bugs": {
+    "url": "https://github.com/gurov/pereplet/issues"
+  },
   "keywords": [
     "book",
     "cover",
