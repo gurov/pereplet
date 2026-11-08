@@ -21,3 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Fonts in fonts/ are licensed under the SIL Open Font License 1.1 (see fonts/*-OFL.txt).
+
+Color combinations in src/wada.ts are from Sanzo Wada, "A Dictionary of Color Combinations" (1933),
+via the dictionary-of-colour-combinations dataset, MIT License, Copyright (c) 2020 Matt DesLauriers.

@@ -1,9 +1,8 @@
 // Переплёты и издательские серии: ткань, кожа, мраморная бумага, бумажные обложки.
-import { H, W, dark, light, n, on, pal, pick, poly, rand, int, smooth, shuffle, type Pt } from '../core.ts';
+import { H, W, byLum, dark, light, lum, mix, n, on, pal, pick, rand, int, smooth, shuffle, wada, wadaColor, type Pt } from '../core.ts';
 import { F, caps, fit, txt } from '../text.ts';
 import { AUTHOR, bg, circle, frame, initial, paper, path, pattern, rect, stroke, texts, type Style } from '../cover.ts';
 
-const CLOTH = pal('7b2d26 2e5949 24426b 5a3b5d 7d5320 2f5f6b 474d57 6b3e26 44522c 743f5b 1f4e5f 8f3b2a 2b2b2e 9a7b4f 5d6b74 a5603a 3f3a63 6e7f5c b39a6c 8a3c4a 3c4a3a 6a2f3f');
 const FOIL = pal('d6b46e d6b46e c9ccd1 c98a5a efe4c8');
 
 export const cloth: Style = {
@@ -11,14 +10,17 @@ export const cloth: Style = {
   name: 'Переплёт',
   variants: ['Рамка', 'Наклейка', 'Блинт', 'Линейки', 'Тиснение'],
   w: 2,
+  sp: 0.7,
   draw(c) {
     const { r, v, L, R, cx, cw } = c;
-    const base = pick(r, CLOTH);
+    // Ткань и кожа корешка — пара Вады, приглушённая, как выцветший коленкор.
+    const [c1, c2] = shuffle(r, wada(r, 2));
+    const base = mix(lum(c1) > 0.45 ? dark(c1, 0.25) : c1, '#4a4238', 0.22);
     const mat = pick(r, ['cloth', 'cloth', 'leather', 'paper'] as const);
     const foil = lightOn(base, pick(r, FOIL));
     const font = pick(r, [F.serif, F.old, F.didone, caps(F.antique, 0.1), F.serif]);
     const af = pick(r, [AUTHOR, caps(F.serif, 0.08), caps(F.old, 0.1)]);
-    const sc = pick(r, [dark(base, 0.45), dark(base, 0.6), pick(r, CLOTH), '#3a2418']);
+    const sc = pick(r, [dark(base, 0.5), dark(mix(c2, '#3a2418', 0.3), 0.3), '#3a2418']);
     let body = '';
     let corners = r() < 0.35;
     if (v === 0) {
@@ -110,72 +112,19 @@ const lightOn = (base: string, foil: string) => (on(base) === '#1d1b19' ? dark(b
 
 // ============ Мраморная бумага ============
 
-const MARBLE = [
-  pal('1d2f4a c9a24b a3392c e9e1cf 2f5d50'),
-  pal('3b2f63 e0b85a c4553b f0e8d8 6d8fb0'),
-  pal('6b2a2a d9c49a 2a4d6b efe6d0 8c9a6b'),
-  pal('9cb6c9 e8d7b0 c98f7c f4efe6 6c7a8a'),
-  pal('2e3b2e a5b07a e3d8b8 8a5a3c d9a35a'),
-  pal('22303c 8aa3b5 e9e4da b5503c 3f6d6a'),
-  pal('5a3a5e d8a6b0 f1e3dc 3e6f8a e8c56a'),
-  pal('31261d b48a52 eadbc0 6a2e2e 4c6b5c'),
-];
-
-// Капли краски на воде (Jaffer, «Mathematical marbling»): каждая новая капля раздвигает прежние.
-function drops(r: () => number, colors: string[], k: number): string {
-  const shapes: { p: Pt[]; c: string }[] = [];
-  for (let i = 0; i < k; i++) {
-    const cx = rand(r, -10, W + 10);
-    const cy = rand(r, -10, H + 10);
-    const rad = rand(r, 14, 34);
-    for (const s of shapes)
-      for (const p of s.p) {
-        const dx = p[0] - cx;
-        const dy = p[1] - cy;
-        const m = Math.sqrt(1 + (rad * rad) / (dx * dx + dy * dy || 1));
-        p[0] = cx + dx * m;
-        p[1] = cy + dy * m;
-      }
-    const p: Pt[] = [];
-    for (let j = 0; j < 18; j++) p.push([cx + rad * Math.cos((j / 18) * 2 * Math.PI), cy + rad * Math.sin((j / 18) * 2 * Math.PI)]);
-    shapes.push({ p, c: colors[i % colors.length] });
-  }
-  // Гребень поперёк: «павлиний» изгиб.
-  const amp = rand(r, 6, 16);
-  const f = rand(r, 0.03, 0.07);
-  return shapes.map((s) => path(poly(s.p.map(([x, y]) => [x + amp * Math.sin(y * f), y])), s.c)).join('');
-}
-
-// Полосы, изогнутые волной и протянутые гребнем.
-function combed(r: () => number, colors: string[]): string {
-  const k = int(r, 10, 14);
-  const a1 = rand(r, 6, 22);
-  const f1 = rand(r, 0.02, 0.06);
-  const a2 = rand(r, 4, 14);
-  const f2 = rand(r, 0.05, 0.14);
-  const ph = rand(r, 0, 6);
-  let out = '';
-  for (let i = 0; i <= k; i++) {
-    const y0 = (i / k) * (H + 40) - 30;
-    const p: Pt[] = [];
-    for (let x = -20; x <= W + 20; x += 20) {
-      const y = y0 + a1 * Math.sin(x * f1 + ph + i * 0.3);
-      p.push([x + a2 * Math.sin(y * f2), y]);
-    }
-    out += path(smooth(p, false) + `L${W + 20} ${H + 20}L-20 ${H + 20}Z`, colors[i % colors.length]);
-  }
-  return out;
-}
-
 export const marble: Style = {
   id: 'marble',
   name: 'Мрамор',
-  variants: ['Гребень', 'Капли', 'Волна'],
+  variants: ['Волна'],
+  sp: 1,
   draw(c) {
-    const { r, v, L, cw } = c;
-    const colors = shuffle(r, pick(r, MARBLE));
-    const art = v === 1 ? bg(colors[0]) + drops(r, colors.slice(1).concat(colors[0]), int(r, 12, 16)) : v === 0 ? bg(colors[0]) + combed(r, colors) : bg(colors[1]) + combedWave(r, colors);
-    const sc = pick(r, ['#3a2418', '#5a1f1f', '#1f2f3a', '#2c3a2a', '#4a3020']);
+    const { r, L, cw } = c;
+    // Краски — сочетание Вады; светлая повторяется, чтобы узор дышал.
+    // Большими полосами яркие краски режут глаз — приглушаем к общему тёплому тону.
+    const w = wada(r, pick(r, [3, 4] as const)).map((x) => mix(x, '#7d705e', 0.2));
+    const colors = shuffle(r, [...w, byLum(w).at(-1)!]);
+    const art = bg(colors[1]) + combedWave(r, colors);
+    const sc = mix(byLum(w)[0], '#2a1a10', 0.6);
     const lw = Math.min(cw, 128);
     const lx = L + (cw - lw) / 2;
     const ly = rand(r, 40, 70);
@@ -195,7 +144,7 @@ export const marble: Style = {
 // Волна: тонкие полосы, которые идут вверх и вниз (французский «каскад»).
 function combedWave(r: () => number, colors: string[]): string {
   let out = '';
-  const k = int(r, 9, 13);
+  const k = int(r, 12, 18);
   const amp = rand(r, 20, 50);
   const f = rand(r, 0.015, 0.03);
   for (let i = 0; i <= k; i++) {
@@ -209,15 +158,13 @@ function combedWave(r: () => number, colors: string[]): string {
 
 // ============ Издательская серия ============
 
-const SERIES = pal('e2702b 2f7a53 2b5f9e 6d4a8f c8364f 7a2433 d9a525 5b6b7a 1f7c7a b8562a 3c3c3c 8a9a3a');
-
 export const series: Style = {
   id: 'series',
   name: 'Серия',
   variants: ['Три полосы', 'Окно', 'Плашка', 'Колонка'],
   draw(c) {
     const { r, v, L, R, cx, cw } = c;
-    const col = pick(r, SERIES);
+    const col = wadaColor(r, 0.05, 0.38);
     const p = paper(r);
     const ink = '#1f1d1b';
     const font = pick(r, [F.serif, F.didone, F.old, caps(F.narrow, 0.04)]);
@@ -271,8 +218,6 @@ export const series: Style = {
 
 // ============ Печать 60-х: две краски, наложение, сбитая приводка ============
 
-const INKS = [pal('c8452c 2f6f8f'), pal('d9a03a 3b6e4f'), pal('b8343b e0b13a'), pal('2f5d8a e07b39'), pal('6a8a3c c94f3d'), pal('8b4a8c e2b23c'), pal('2a7d7a e86a4a'), pal('4a4a8a d8b04a')];
-
 function blob(r: () => number, cx: number, cy: number, rad: number, k = 7): string {
   const p: Pt[] = [];
   for (let i = 0; i < k; i++) {
@@ -286,10 +231,11 @@ function blob(r: () => number, cx: number, cy: number, rad: number, k = 7): stri
 export const print60: Style = {
   id: 'print60',
   name: 'Печать 60-х',
-  variants: ['Фигуры', 'Полосы', 'Окно'],
+  variants: ['Фигуры', 'Полосы'],
   draw(c) {
-    const { r, v, L, R, cx, cw, id } = c;
-    const [i1, i2] = shuffle(r, pick(r, INKS));
+    const { r, v, L, R, cw, id } = c;
+    // Две краски — тёмные из тройки Вады: на бумаге и при наложении они видны.
+    const [i1, i2] = shuffle(r, byLum(wada(r, 3)).slice(0, 2));
     const p = pick(r, ['#efe8d6', '#ece4cf', '#f2ecdc']);
     const k = '#262320';
     const mb = ' style="mix-blend-mode:multiply"';
@@ -312,7 +258,7 @@ export const print60: Style = {
         fills +
         `<g transform="${off}">${lines}</g>` +
         texts(c, { x: L, y: 222, w: cw, h: 62 }, { font, max: 22, lines: 2, color: k, af: AUTHOR, as: 9, align: 'start', ac: i1 });
-    } else if (v === 1) {
+    } else {
       // Полосы: широкие полосы краски, полутон, вывороткой название.
       const y0 = rand(r, 120, 160);
       svg =
@@ -327,16 +273,6 @@ export const print60: Style = {
         circle(R - 30, y0 + 120, 34, i2, mb) +
         circle(R - 52, y0 + 104, 20, i1, mb) +
         `<g transform="${off}">${circle(R - 30, y0 + 120, 34, 'none', ` stroke="${k}" stroke-width="1.6"`)}</g>`;
-    } else {
-      // Окно: краска во всю обложку, бумажная плашка, знак из двух фигур.
-      const wy = rand(r, 140, 170);
-      svg =
-        bg(i1) +
-        rect(L - 4, wy, cw + 8, 112, p) +
-        texts(c, { x: L + 8, y: wy + 12, w: cw - 16, h: 88 }, { font, max: 22, color: k, af: AUTHOR, as: 9, ac: i1 }) +
-        circle(cx - 12, 74, 36, i2, mb) +
-        path(`M${n(cx - 10)} 122L${n(cx + 40)} 40L${n(cx + 46)} 122Z`, p, ' opacity=".9"' + mb) +
-        `<g transform="${off}">${stroke(`M${n(cx - 10)} 122L${n(cx + 40)} 40L${n(cx + 46)} 122Z`, k, 1.6)}</g>`;
     }
     return { svg, tex: 'grain', spine: 'tone', age: 0.8, base: p };
   },

@@ -8,7 +8,7 @@
 //   Шрифты — fonts/fonts.css; список нужных обложке — в `fonts` (дождаться document.fonts.load).
 import { H, W, hash, rng, weighted } from './core.ts';
 import { used } from './text.ts';
-import { spine, spineWidth, texture, wear, type Ctx, type Style } from './cover.ts';
+import { SPINE, spine, texture, wear, type Ctx, type Style } from './cover.ts';
 import { STYLES as ALL } from './styles/index.ts';
 
 export interface Book {
@@ -18,7 +18,7 @@ export interface Book {
 export interface Options {
   style?: string; // id стиля вместо выбранного по автору
   variant?: number;
-  spine?: number; // ширина корешка из 200
+  spine?: number; // ширина полосы корешка из 200 (0 или 34)
   age?: number; // 0…1 вместо выбранной
   id?: string; // приставка id внутри SVG
 }
@@ -47,7 +47,7 @@ export function drawCover(book: Book, opts: Options = {}): Cover {
   const r = rng(hash(key));
   const v0 = Math.floor(r() * style.variants.length);
   const v = opts.variant ?? v0;
-  const s0 = spineWidth(r);
+  const s0 = r() < (style.sp ?? 0.5) ? SPINE : 0;
   const s = opts.spine ?? s0;
   const a0 = r() ** 1.6;
   const id = opts.id ?? 'p' + hash(key + style.id).toString(36);

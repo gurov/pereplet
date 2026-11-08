@@ -1,6 +1,6 @@
 // Эпохи и страны — абстрактно, как обложки серий: ар-деко, модерн, античность, манускрипт,
 // Восток, звёздная геометрия, машинопись, ретрофантастика.
-import { H, W, dark, light, n, on, pal, pick, poly, rand, int, smooth, shuffle, type Pt } from '../core.ts';
+import { H, W, byLum, dark, light, n, wada, on, pal, pick, poly, rand, int, smooth, shuffle, type Pt } from '../core.ts';
 import { F, caps, fit, measure, txt } from '../text.ts';
 import { GOLD, bg, circle, clip, frame, initial, path, pattern, rect, stroke, texts, type Style } from '../cover.ts';
 
@@ -138,9 +138,9 @@ const meander = (k: number, col: string, sw: number) =>
 export const antique: Style = {
   id: 'antique',
   name: 'Античность',
-  variants: ['Меандр', 'Колонны', 'Медальон', 'Фриз'],
+  variants: ['Меандр', 'Медальон', 'Фриз'],
   draw(c) {
-    const { r, v, L, R, cx, cw, id } = c;
+    const { r, v, L, cx, cw, id } = c;
     const black = r() < 0.4;
     const terra = pick(r, ['#c06a3d', '#b5562f', '#c47a45', '#a84c32']);
     const b = black ? '#1f1a17' : pick(r, ['#ecdcc0', '#e8d5b5', '#efe4cf']);
@@ -153,17 +153,6 @@ export const antique: Style = {
     if (v === 0) {
       art = band(22, f) + band(H - 44, f) + stroke(`M0 16H${W}M0 50H${W}M0 ${H - 50}H${W}M0 ${H - 16}H${W}`, f, 1.6);
     } else if (v === 1) {
-      // Колонны с каннелюрами, название на архитраве.
-      const cols = 3;
-      const w = 26;
-      for (let i = 0; i < cols; i++) {
-        const x = L + ((i + 0.5) / cols) * cw - w / 2;
-        art += rect(x - 4, 116, w + 8, 8, f) + rect(x, 124, w, 140, f, ' opacity=".9"') + stroke(`M${n(x + 6)} 128V260M${n(x + 13)} 128V260M${n(x + 20)} 128V260`, b, 1.6) + rect(x - 4, 264, w + 8, 8, f);
-      }
-      art += rect(L - 10, 100, cw + 20, 10, f) + path(`M${n(L - 10)} 96L${n(cx)} 62L${n(R + 10)} 96Z`, 'none', ` stroke="${f}" stroke-width="2"`) + rect(0, 276, W, 6, f);
-      tb = { x: L, y: 14, w: cw, h: 44 };
-      return { svg: bg(b) + art + texts(c, { ...tb, h: 40 }, { font, max: 16, lines: 2, color: f, as: 7.5, af: caps(F.antique, 0.2), gap: 4 }), tex: 'grain', spine: 'tone', age: 0.8, base: b };
-    } else if (v === 2) {
       // Медальон: круг с точками, буква в середине.
       const cy = 96;
       let dots = '';
@@ -196,9 +185,9 @@ const INK2 = pal('a8322a 2c4a8a 3e6b3a');
 export const manuscript: Style = {
   id: 'manuscript',
   name: 'Манускрипт',
-  variants: ['Буквица', 'Кайма', 'Плетёнка'],
+  variants: ['Кайма', 'Плетёнка'],
   draw(c) {
-    const { r, v, L, R, cx, cw, id } = c;
+    const { r, v, L, R, cw, id } = c;
     const b = pick(r, PARCH);
     const [c1, c2] = shuffle(r, INK2);
     const k = '#2a2018';
@@ -207,14 +196,6 @@ export const manuscript: Style = {
     let art = '';
     let tb = { x: L + 4, y: 150, w: cw - 8, h: 120 };
     if (v === 0) {
-      // Буквица: квадрат с золотой рамкой и большой буквой.
-      const s = Math.min(96, cw - 20);
-      const x = cx - s / 2;
-      const y = 34;
-      const ch = fit(initial(c.title), F.slav, { maxW: s - 24, max: 76 })!;
-      art = rect(x, y, s, s, c2) + frame(x + 4, y + 4, s - 8, s - 8, GOLD, 2) + frame(x, y, s, s, k, 1.4) + txt(ch, cx, y + s / 2 + ch.size * 0.36, GOLD, 'middle') + circle(x, y, 5, c1) + circle(x + s, y, 5, c1) + circle(x, y + s, 5, c1) + circle(x + s, y + s, 5, c1);
-      art += stroke(`M${n(L)} 146H${n(R)}`, c1, 1) + stroke(`M${n(L)} 276H${n(R)}`, c1, 1);
-    } else if (v === 1) {
       // Кайма из цветных кусков с квадратами в углах.
       const seg = 18;
       let d1 = '';
@@ -320,7 +301,6 @@ export const east: Style = {
 
 // ============ Звёздная геометрия ============
 
-const GIRIH = [pal('22407a 2a8c8c f2eee4 d4a24c'), pal('2f5e4e d4a24c f0e8d6 b4553a'), pal('1d3557 e9c46a f1faee e76f51'), pal('5a2a2a d9b26f efe6d6 2a7a7a'), pal('23395b 9fc4c4 f4efe2 c0843a')];
 
 // Звезда {n/k}: n вершин через k.
 function star(cx: number, cy: number, R: number, nn: number, k: number, rot = 0): string {
@@ -346,7 +326,9 @@ export const girih: Style = {
   variants: ['Розетка', 'Плитка', 'Арка'],
   draw(c) {
     const { r, v, L, cx, cw, id } = c;
-    const [d0, d1, p0, a0] = pick(r, GIRIH);
+    // Сочетание Вады по светлоте: тёмный фон, второй тёмный, краска узора, светлая линия.
+    const w = byLum(wada(r, 4));
+    const [d0, d1, a0, p0] = [dark(w[0], 0.25), w[1], w[2], light(w[3], 0.45)];
     const font = pick(r, [caps(F.antique, 0.1), F.serif, F.old]);
     let art = '';
     let tb = { x: L, y: 200, w: cw, h: 80 };
@@ -474,9 +456,9 @@ const PLANET = pal('e8a85c d9603b 7ec4c4 c9b8e8 f2d16b e07a8a');
 export const space: Style = {
   id: 'space',
   name: 'Космос',
-  variants: ['Планета', 'Орбиты', 'Затмение', 'Горизонт'],
+  variants: ['Затмение', 'Горизонт'],
   draw(c) {
-    const { r, v, L, R, cx, cw, id } = c;
+    const { r, v, L, cx, cw, id } = c;
     const sky = pick(r, SKY);
     const [p1, p2] = shuffle(r, PLANET);
     const font = pick(r, [F.tech, F.heavy, caps(F.narrow, 0.08)]);
@@ -486,31 +468,9 @@ export const space: Style = {
     let art =
       `<linearGradient id="${id}s" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset=".6" stop-color="${sky[1]}"/><stop offset="1" stop-color="${sky[2]}"/></linearGradient>` +
       bg(`url(#${id}s)`) +
-      stroke(stars, '#fff', 1.6, ' stroke-linecap="round" opacity=".8"') +
-      pattern(id + 'h', 5, 5, `<circle cx="2.5" cy="2.5" r="1.3" fill="#000"/>`, ' patternTransform="rotate(45)"');
+      stroke(stars, '#fff', 1.6, ' stroke-linecap="round" opacity=".8"');
     const ty = 22;
     if (v === 0) {
-      // Планета с кольцом и тенью полутоном.
-      const px = rand(r, cx - 20, cx + 30);
-      const py = rand(r, 150, 180);
-      const pr = rand(r, 46, 62);
-      const tilt = rand(r, -24, -8);
-      const ring = (half: 0 | 1) => path(`M${n(px - pr * 1.7)} ${n(py)}a${n(pr * 1.7)} ${n(pr * 0.42)} 0 0 ${half} ${n(pr * 3.4)} 0`, 'none', ` stroke="${p2}" stroke-width="5" transform="rotate(${n(tilt)} ${n(px)} ${n(py)})"`);
-      let bands = '';
-      for (let i = -3; i <= 3; i++) bands += rect(px - pr, py + i * pr * 0.28, pr * 2, pr * 0.1, dark(p1, 0.2));
-      art += ring(1) + circle(px, py, pr, p1) + clip(id + 'p', `M${n(px - pr)} ${n(py)}a${n(pr)} ${n(pr)} 0 1 0 ${n(2 * pr)} 0a${n(pr)} ${n(pr)} 0 1 0 ${n(-2 * pr)} 0`, bands + circle(px + pr * 0.5, py - pr * 0.35, pr * 1.1, `url(#${id}h)`, ' opacity=".35"')) + ring(0) + circle(rand(r, L, R), rand(r, 230, 270), 7, p2);
-    } else if (v === 1) {
-      // Орбиты: эллипсы вокруг звезды, на них планеты.
-      const sx = cx;
-      const sy = rand(r, 160, 190);
-      art += circle(sx, sy, 14, p1);
-      for (let i = 1; i <= 5; i++) {
-        const a = 18 + i * 17;
-        art += `<ellipse cx="${n(sx)}" cy="${n(sy)}" rx="${a}" ry="${n(a * 0.38)}" fill="none" stroke="${fg}" stroke-opacity=".5" stroke-width="1.2"/>`;
-        const t = rand(r, 0, 6.28);
-        art += circle(sx + a * Math.cos(t), sy + a * 0.38 * Math.sin(t), rand(r, 2.5, 6), i % 2 ? p2 : p1);
-      }
-    } else if (v === 2) {
       // Затмение: тёмный диск, корона, лучи.
       const ex = cx;
       const ey = rand(r, 150, 175);

@@ -81,6 +81,7 @@ textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height
   <header class="top">
     <h1>Галерея переплётов</h1>
     <p class="lead">Обложки, которые пакет <b>knigopis-pereplet</b> рисует из названия и автора. Книги настоящие, из архива Книгописи. Отметьте у каждого варианта: <b>оставить</b>, <b>доработать</b> или <b>убрать</b>, а в комментарии напишите, что не так. Оценки сохраняются сами, Claude прочитает их перед следующим кругом.</p>
+    <p class="lead"><b>Круг второй.</b> Убраны «Мемфис» и варианты с отметкой «убрать». Корешок теперь либо толстый, либо его нет. Цвета мрамора, мозаик, кривых, рельефа, гильоша, орнамента, «Севера», звёзд, витражей, тканей и серий взяты из сочетаний Вады Сандзо («A Dictionary of Color Combinations», 1933). Оценки первого круга сохранены отдельно.</p>
     <div class="facts" id="facts"></div>
   </header>
 
@@ -113,6 +114,7 @@ textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height
 <script>
 const BOOKS = /*BOOKS*/[];
 const STATS = /*STATS*/{};
+const COL = 'round2'; // оценки второго круга; первый — в 'ratings'
 const VOTES = [['keep', 'Оставить'], ['fix', 'Доработать'], ['drop', 'Убрать']];
 const state = { w: 80, spine: undefined, age: undefined, off: 0, filter: 'all' };
 const ratings = new Map(); // id → {vote, note}
@@ -222,8 +224,8 @@ function syncRatings() {
 }
 
 const local = {
-  load() { try { return JSON.parse(localStorage.getItem('pp-ratings') || '{}'); } catch { return {}; } },
-  save() { try { localStorage.setItem('pp-ratings', JSON.stringify(Object.fromEntries(ratings))); } catch {} },
+  load() { try { return JSON.parse(localStorage.getItem('pp-' + COL) || '{}'); } catch { return {}; } },
+  save() { try { localStorage.setItem('pp-' + COL, JSON.stringify(Object.fromEntries(ratings))); } catch {} },
 };
 const writing = new Map();
 async function save(id) {
@@ -234,7 +236,7 @@ async function save(id) {
   if (writing.get(id)) { writing.set(id, 'again'); return; }
   writing.set(id, true);
   try {
-    await db.collection('ratings').doc(id).set({ vote: r.vote || '', note: r.note || '', at: new Date().toISOString() });
+    await db.collection(COL).doc(id).set({ vote: r.vote || '', note: r.note || '', at: new Date().toISOString() });
   } catch (e) {
     showNote('Оценка не сохранилась на сервере (' + (e.code || 'ошибка') + '). Она осталась в этом браузере.');
   }
@@ -294,7 +296,7 @@ document.fonts.ready.then(() => Promise.all(['serif', 'old', 'didone', 'antique'
     return;
   }
   const timer = setTimeout(() => showNote('Сохранённые оценки пока не загрузились. Новые отметки сохранятся, когда связь появится.'), 10000);
-  db.collection('ratings').onSnapshot(
+  db.collection(COL).onSnapshot(
     (snap) => {
       if (!snap.metadata.fromCache) { clearTimeout(timer); showNote(''); }
       for (const d of snap.docs) {

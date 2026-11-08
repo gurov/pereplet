@@ -1,26 +1,8 @@
 // Орнамент: узорная бумага (повтор плитки через <pattern>) и плашка с названием.
-import { W, H, n, pal, pick, rand, type Rng } from '../core.ts';
+import { W, H, dark, mix, n, pick, rand, shuffle, wada, type Rng } from '../core.ts';
 import { F, caps } from '../text.ts';
 import { bg, circle, frame, pattern, rect, texts, type Style } from '../cover.ts';
 import { tiles } from './graphic.ts';
-
-// [фон, узор, краска]. Большей частью приглушённые, немного ярких.
-const ORN = [
-  'e9e1cf b9a27c 4a3a2a',
-  '2f3b45 4d5e6b e6dcc4',
-  'f0e6d6 c46a4a 2f3b45',
-  'dfe5dc 7d9a86 2f3a32',
-  '3d2f3a 6b4f62 e8d6b8',
-  'e6d8c3 8a5a44 2a2420',
-  '1f3b4d 2f5a70 e8d9b5',
-  'f2ebe0 2f4f6f 2a2a2e',
-  'efe0d0 a33b3b 2a2420',
-  'd9d4c7 5b5e66 2a2a2e',
-  '26453f c9a85c efe6d0',
-  'f3e6d0 d49a3a 3a2f2a',
-  '1d3557 e63946 f1faee',
-  '264653 e9c46a f4f1de',
-].map(pal);
 
 const motifs: ((s: number, a: string, b: string, k: string) => [string, number, number])[] = [
   // Чешуя
@@ -56,7 +38,10 @@ export const ornament: Style = {
   variants: ['Чешуя', 'Ромбы', 'Шеврон', 'Горох', 'Клетка', 'Решётка', 'Звёзды', 'Плитки'],
   draw(c) {
     const { r, v, L, cx, cw, id } = c;
-    const [b, a, k] = pick(r, ORN);
+    // Сочетание Вады: фон и узор — две краски, узор иногда приглушён к фону; третья, затемнённая, — линии.
+    const [b, a0, k0] = shuffle(r, wada(r, 3));
+    const a = mix(a0, b, rand(r, 0, 0.4));
+    const k = dark(k0, 0.35);
     const font = pick(r, [F.serif, F.old, caps(F.narrow, 0.05), F.didone, caps(F.antique, 0.1)]);
     let art: string;
     if (v === 7) art = tiles(r as Rng, 4, 6, 50, 0, 0, [b, a, k], 'qhtcsn');
@@ -65,7 +50,7 @@ export const ornament: Style = {
       const [body, w, h] = motifs[v](s, a, b, k);
       art = pattern(id + 'o', w, h, body) + rect(0, 0, W, H, `url(#${id}o)`);
     }
-    const plate = pick(r, ['#f4efe4', '#efe7d6', b === '#1d3557' ? '#f1faee' : '#f3ede1']);
+    const plate = pick(r, ['#f4efe4', '#efe7d6', '#f3ede1']);
     const ink = '#26221e';
     const layout = Math.floor(rand(r, 0, 4));
     let box: string;

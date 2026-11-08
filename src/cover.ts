@@ -31,6 +31,7 @@ export interface Style {
   name: string;
   variants: string[];
   w?: number; // как часто выпадает
+  sp?: number; // доля обложек с полосой корешка, по умолчанию половина
   draw: (c: Ctx) => Art;
 }
 
@@ -132,13 +133,8 @@ export function texture(id: string, kind: string, where = `width="${W}" height="
 
 // ---------- Корешок: полоса другого материала и сгиб ----------
 
-export const SPINES = [0, 10, 16, 24, 34];
-const SPINE_W = [2, 3, 3, 2, 1];
-export const spineWidth = (r: Rng) => {
-  let x = r() * 11;
-  for (let i = 0; i < SPINES.length; i++) if ((x -= SPINE_W[i]) < 0) return SPINES[i];
-  return 0;
-};
+// Корешок либо толстый, либо его нет: промежуточные ширины смотрятся случайно.
+export const SPINE = 34;
 
 export function spine(c: Ctx, art: Art): string {
   const { s, id } = c;

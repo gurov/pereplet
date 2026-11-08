@@ -1,7 +1,7 @@
-// Графика XX века: авангард, Баухаус, швейцарский стиль, Мемфис, оп-арт, скандинавский минимализм.
-import { H, W, dark, n, on, pal, pick, poly, rand, int, smooth, shuffle, type Pt, type Rng } from '../core.ts';
-import { F, caps, fit, txt, measure } from '../text.ts';
-import { AUTHOR, bg, circle, clip, frame, g, initial, path, pattern, rect, stroke, texts, type Style } from '../cover.ts';
+// Графика XX века: авангард, Баухаус, швейцарский стиль, оп-арт, скандинавский минимализм.
+import { H, W, dark, lum, n, on, pal, pick, poly, rand, int, smooth, shuffle, wada, type Pt, type Rng } from '../core.ts';
+import { F, caps, fit, txt } from '../text.ts';
+import { AUTHOR, bg, circle, clip, frame, g, path, rect, stroke, texts, type Style } from '../cover.ts';
 
 const PAPERS = ['#ece2cc', '#efe6d2', '#e8dcc0', '#f0e9da'];
 
@@ -112,7 +112,7 @@ export function tiles(r: Rng, cols: number, rows: number, s: number, x0: number,
 export const bauhaus: Style = {
   id: 'bauhaus',
   name: 'Баухаус',
-  variants: ['Плитки', 'Композиция', 'Арки', 'Буква'],
+  variants: ['Плитки', 'Композиция', 'Арки'],
   draw(c) {
     const { r, v, L, R, cx, cw } = c;
     const [p, ...cols] = pick(r, BAUHAUS);
@@ -134,7 +134,7 @@ export const bauhaus: Style = {
         stroke(`M0 ${n(rand(r, 150, 190))}L${W} ${n(rand(r, 120, 170))}`, k, 2.4) +
         stroke(`M${n(rand(r, L, R))} 0V215`, k, 1.2) +
         texts(c, { x: L, y: 222, w: cw, h: 64 }, { font, max: 22, lines: 3, color: k, align: 'start', authorFirst: true, gap: 6 });
-    } else if (v === 2) {
+    } else {
       // Арки: стопки полукругов.
       let arcs = '';
       const s = W / 2;
@@ -152,18 +152,6 @@ export const bauhaus: Style = {
           });
         }
       svg = bg(p) + arcs + texts(c, { x: L, y: 16, w: cw, h: 74 }, { font, max: 22, lines: 3, color: k, align: 'start', at: 'top', ac: cols[0] });
-    } else {
-      // Буква: огромная заглавная, за ней круг.
-      const ch = initial(c.title);
-      const size = 230;
-      const w = measure(ch, F.heavy, size);
-      const big = { lines: [ch], size: w > 190 ? size * (190 / w) : size, font: F.heavy, lh: 1, maxW: 400 };
-      svg =
-        bg(p) +
-        circle(rand(r, L + 20, R - 20), rand(r, 70, 110), rand(r, 50, 70), cols[0], mb) +
-        rect(rand(r, L - 10, cx), rand(r, 120, 160), rand(r, 40, 90), 50, cols[2], mb) +
-        txt(big, cx, 196, k, 'middle', mb) +
-        texts(c, { x: L, y: 220, w: cw, h: 66 }, { font, max: 20, lines: 3, color: k, align: 'start', ac: cols[1] });
     }
     return { svg, tex: 'grain', spine: 'tone', age: 0.4, base: p };
   },
@@ -236,81 +224,6 @@ export const swiss: Style = {
       age: 0.25,
       base: b,
     };
-  },
-};
-
-// ============ Мемфис ============
-
-const MEMPHIS_BG = pal('f6d6d6 d8ecef fbe7b5 e3dcf2 d9efd9 fde2c8 f4f1ea');
-const MEMPHIS = pal('ff5c8a 2fb5b0 ffc23a 6a5acd ff7a3d 3d7bd9 7bc96f');
-const K = '#1b1b1b';
-
-function squiggle(x: number, y: number, len: number, amp: number): string {
-  let d = `M${n(x)} ${n(y)}`;
-  for (let i = 0; i < len; i++) d += `q${n(6)} ${n(i % 2 ? amp : -amp)} 12 0`;
-  return d;
-}
-
-export const memphis: Style = {
-  id: 'memphis',
-  name: 'Мемфис',
-  variants: ['Конфетти', 'Терраццо', 'Формы'],
-  draw(c) {
-    const { r, v, L, R, cw, id } = c;
-    const p = pick(r, MEMPHIS_BG);
-    const cols = shuffle(r, MEMPHIS);
-    const font = pick(r, [F.heavy, F.tech]);
-    const by = v === 1 ? rand(r, 100, 140) : rand(r, 196, 214);
-    const bh = 76;
-    const box =
-      rect(L, by + 4, cw, bh, K) +
-      rect(L - 5, by, cw, bh, '#fffdf8', ` stroke="${K}" stroke-width="2"`) +
-      texts(c, { x: L + 4, y: by + 10, w: cw - 18, h: bh - 20 }, { font, max: 18, lines: 3, color: K, ac: dark(cols[0], 0.2), af: AUTHOR, as: 8.5 });
-    let art = '';
-    if (v === 0) {
-      // Конфетти: фигурки, повёрнутые как попало.
-      const items = [
-        (x: number, y: number, col: string) => stroke(squiggle(x - 24, y, 4, 7), col, 3.5, ' stroke-linecap="round"'),
-        (x: number, y: number, col: string) => path(`M${n(x)} ${n(y - 12)}l12 20h-24z`, 'none', ` stroke="${col}" stroke-width="3"`),
-        (x: number, y: number, col: string) => circle(x, y, 9, col),
-        (x: number, y: number, col: string) => stroke(`M${n(x - 18)} ${n(y)}l6-8 6 8 6-8 6 8 6-8`, col, 3),
-        (x: number, y: number, col: string) => path(`M${n(x - 10)} ${n(y)}a10 10 0 0 1 20 0z`, col),
-        (x: number, y: number, col: string) => stroke(`M${n(x - 8)} ${n(y)}h16M${n(x)} ${n(y - 8)}v16`, col, 3.5),
-        (x: number, y: number, col: string) => rect(x - 7, y - 7, 14, 14, col),
-      ];
-      for (let i = 0; i < 18; i++) {
-        const x = rand(r, 10, W - 10);
-        const y = rand(r, 12, by - 8) * (i < 14 ? 1 : 0) + (i < 14 ? 0 : rand(r, by + bh + 12, H - 6));
-        art += g(pick(r, items)(0, 0, i % 3 ? pick(r, cols) : K), `transform="translate(${n(x)} ${n(y)}) rotate(${int(r, 0, 360)})"`);
-      }
-      art = pattern(id + 'd', 10, 10, `<circle cx="5" cy="5" r="1.4" fill="${K}"/>`) + rect(rand(r, 0, 100), rand(r, 20, 120), 80, 60, `url(#${id}d)`) + art;
-    } else if (v === 1) {
-      // Терраццо: крошка камня.
-      for (let i = 0; i < 70; i++) {
-        const x = rand(r, 0, W);
-        const y = rand(r, 0, H);
-        const s = rand(r, 2, 7);
-        const pts: Pt[] = [];
-        const k = int(r, 3, 5);
-        for (let j = 0; j < k; j++) {
-          const a = (j / k) * 6.28 + rand(r, 0, 0.8);
-          pts.push([x + s * Math.cos(a) * rand(r, 0.6, 1), y + s * Math.sin(a) * rand(r, 0.6, 1)]);
-        }
-        art += path(poly(pts), i % 5 ? cols[i % 4] : K);
-      }
-    } else {
-      // Формы: круг в полоску, треугольник в горошек, волна.
-      art =
-        pattern(id + 's', 8, 8, `<path d="M0 2h8" stroke="${K}" stroke-width="2.5"/>`, ' patternTransform="rotate(45)"') +
-        pattern(id + 'd', 9, 9, `<circle cx="4.5" cy="4.5" r="1.8" fill="${K}"/>`) +
-        circle(rand(r, L + 30, R), rand(r, 60, 90), rand(r, 40, 52), cols[0]) +
-        circle(rand(r, L + 30, R), rand(r, 60, 90), rand(r, 34, 46), `url(#${id}s)`) +
-        path(`M${n(rand(r, 0, 40))} 190l${n(rand(r, 40, 70))}-${n(rand(r, 80, 110))}l${n(rand(r, 30, 60))} ${n(rand(r, 80, 110))}z`, cols[1]) +
-        path(`M${n(rand(r, 60, 120))} 180l50-70 30 80z`, `url(#${id}d)`) +
-        stroke(squiggle(rand(r, 20, 60), rand(r, 20, 40), 9, 9), K, 4, ' stroke-linecap="round"') +
-        rect(R - 40, 140, 36, 36, cols[2]);
-    }
-    return { svg: bg(p) + art + box, tex: 'grain', spine: 'tone', age: 0.2, base: p };
   },
 };
 
@@ -398,7 +311,6 @@ export const opart: Style = {
 // ============ Скандинавский минимализм ============
 
 const NORDIC_BG = pal('efe8dc e6ece8 f1e4dc e4e7ef ece6d6 e9e2d2');
-const NORDIC = pal('c97b5a 7a9a8a d9b26f 8c9db5 b5838d 5d6d5a e3c0a5 4f5d75 a3b18a d4a373');
 
 export const nordic: Style = {
   id: 'nordic',
@@ -407,7 +319,8 @@ export const nordic: Style = {
   draw(c) {
     const { r, v, L, R, cx, cw } = c;
     const p = pick(r, NORDIC_BG);
-    const cols = shuffle(r, NORDIC);
+    // Формы — сочетание Вады из четырёх; слишком светлые чуть темнее, чтобы не тонули в бумаге.
+    const cols = shuffle(r, wada(r, 4)).map((x) => (lum(x) > 0.6 ? dark(x, 0.18) : x));
     const ink = '#33302c';
     const font = pick(r, [F.serif, F.antique, F.didone, caps(F.narrow, 0.06)]);
     let art = '';
@@ -435,7 +348,7 @@ export const nordic: Style = {
           [x - w / 2, y + h / 2],
           [x - w / 2 - 4, y],
         ];
-        art += path(smooth(pts), cols[i]);
+        art += path(smooth(pts), cols[i % 4]);
         y -= h + 1;
         w *= rand(r, 0.7, 0.88);
       }

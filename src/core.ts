@@ -1,4 +1,5 @@
 // Общее: случайные числа от строки, цвета, числа в SVG.
+import { WADA, WADA_HEX } from './wada.ts';
 
 export const W = 200;
 export const H = 300;
@@ -89,6 +90,32 @@ export function lum(c: string): number {
 }
 // Краска для текста поверх фона: тёмная или светлая из двух.
 export const on = (bg: string, d = '#1d1b19', l = '#fbf7ee') => (lum(bg) > 0.3 ? d : l);
+
+// ---------- Вада Сандзо, «A Dictionary of Color Combinations» ----------
+
+const wcol = (code: number) => {
+  const i = code - (code > 92 ? 41 : 40);
+  return '#' + WADA_HEX.slice(i * 6, i * 6 + 6);
+};
+// Сочетание из k цветов: одно из 120 (по два, по три) или 108 (по четыре).
+export function wada(r: Rng, k: 2 | 3 | 4 = 3): string[] {
+  const i = Math.floor(r() * (k > 3 ? 108 : 120));
+  const s = k === 2 ? i * 2 : k === 3 ? 240 + i * 3 : 600 + i * 4;
+  return [...WADA.slice(s, s + k)].map((c) => wcol(c.charCodeAt(0)));
+}
+// Один цвет справочника со светлотой (lum) в границах.
+export function wadaColor(r: Rng, lo = 0, hi = 1): string {
+  let c = '';
+  for (let t = 0; t < 40; t++) {
+    c = '#' + WADA_HEX.substr(Math.floor(r() * 159) * 6, 6);
+    if (lum(c) >= lo && lum(c) <= hi) break;
+  }
+  return c;
+}
+// От тёмного к светлому.
+export const byLum = (cs: string[]) => [...cs].sort((a, b) => lum(a) - lum(b));
+// Краски, заметные на фоне; не хватает — добавляется тёмная или светлая.
+export const seen = (cs: string[], bg: string, k = 3) => [...cs.filter((x) => Math.abs(lum(x) - lum(bg)) > 0.12), on(bg), on(bg), on(bg)].slice(0, k);
 
 // Палитра: строка «#aaa #bbb …» → массив; так короче в коде.
 export const pal = (s: string) => s.split(' ').map((c) => '#' + c);
