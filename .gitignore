@@ -1,0 +1,5 @@
+node_modules/
+dist/
+gallery/dev/
+gallery/out/
+*.tgz

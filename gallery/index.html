@@ -1,0 +1,311 @@
+<title>Галерея переплётов</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Раскладка: узкая колонка стиля слева, ряды вариантов справа; на телефоне — одна колонка. */
+@font-face{font-family:pp-serif;src:url(fonts/serif.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:pp-old;src:url(fonts/old.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:pp-didone;src:url(fonts/didone.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:pp-antique;src:url(fonts/antique.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:pp-narrow;src:url(fonts/narrow.woff2) format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:pp-tech;src:url(fonts/tech.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:pp-heavy;src:url(fonts/heavy.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:pp-slav;src:url(fonts/slav.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:pp-mono;src:url(fonts/mono.woff2) format("woff2");font-weight:400;font-display:swap}
+:root{
+  --bg:#e9ebe8; --panel:#f6f7f4; --fg:#1e2321; --muted:#5f6763; --line:#cfd4cf;
+  --accent:#1f5c4a; --keep:#2f7a4f; --fix:#a5701c; --drop:#b0392f;
+  --display:pp-narrow,'Arial Narrow',sans-serif; --body:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --mono:pp-mono,ui-monospace,monospace;
+  --w:80px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171a19;--panel:#202423;--fg:#e6e9e4;--muted:#9aa29d;--line:#323836;--accent:#7cc4a6;--keep:#6cc08a;--fix:#e0a64a;--drop:#ec7a6c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171a19;--panel:#202423;--fg:#e6e9e4;--muted:#9aa29d;--line:#323836;--accent:#7cc4a6;--keep:#6cc08a;--fix:#e0a64a;--drop:#ec7a6c;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:1180px;margin:0 auto}
+header.top{padding-block:28px 12px;display:grid;gap:10px}
+h1{font:600 clamp(30px,5vw,44px)/1 var(--display);text-transform:uppercase;letter-spacing:.02em;margin:0;text-wrap:balance}
+.lead{max-width:68ch;margin:0;color:var(--muted)}
+.lead b{color:var(--fg);font-weight:600}
+.facts{display:flex;flex-wrap:wrap;gap:6px 18px;font:13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.facts span b{color:var(--fg);font-weight:400}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:none;color:var(--fg);font:13px var(--body);padding:6px 10px;cursor:pointer;white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.lbl{font:12px var(--body);color:var(--muted);margin-right:4px}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:6px;font:13px var(--body);padding:6px 10px;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.progress{margin-left:auto;font:13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.progress i{font-style:normal}
+.k{color:var(--keep)}.f{color:var(--fix)}.d{color:var(--drop)}
+.note{font-size:13px;color:var(--muted);padding-block:6px 0;margin:0}
+.style{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px 24px;padding-block:26px;border-bottom:1px solid var(--line)}
+.style>aside{display:grid;gap:8px;align-content:start;position:sticky;top:64px}
+.style h2{font:600 24px/1.05 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+.style .sub{font:12px var(--mono);color:var(--muted)}
+.vars{display:grid;gap:18px;min-width:0}
+.var{display:grid;gap:8px;min-width:0}
+.vhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.vhead h3{font:600 15px var(--body);margin:0;min-width:8ch}
+.covers{display:flex;flex-wrap:wrap;gap:12px;min-height:calc(var(--w)*1.5)}
+.cover{width:var(--w);max-width:100%;aspect-ratio:2/3;border-radius:1px 3px 3px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.12);background:var(--line);flex:none}
+.cover svg{display:block;width:100%;height:100%}
+.vote{display:inline-flex;gap:4px}
+.vote button{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;font:12px var(--body);padding:3px 10px;cursor:pointer}
+.vote button[aria-pressed="true"][data-v="keep"]{background:var(--keep);border-color:var(--keep);color:var(--bg)}
+.vote button[aria-pressed="true"][data-v="fix"]{background:var(--fix);border-color:var(--fix);color:var(--bg)}
+.vote button[aria-pressed="true"][data-v="drop"]{background:var(--drop);border-color:var(--drop);color:var(--bg)}
+textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height:34px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg);font:13px/1.4 var(--body);padding:6px 8px}
+.var.dim .covers{opacity:.45}
+.shelf{display:grid;gap:14px;padding-block:26px;border-bottom:1px solid var(--line)}
+.shelf h2,.list h2{font:600 24px/1.05 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0}
+.series{display:grid;gap:6px}
+.series .who{font:600 14px var(--body)}
+.series .who span{font-weight:400;color:var(--muted)}
+.list{display:grid;gap:14px;padding-block:26px}
+.diary{display:grid;gap:0;max-width:720px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 16px}
+.row{display:grid;grid-template-columns:62px 80px minmax(0,1fr);gap:14px;padding-block:12px;border-bottom:1px solid var(--line);align-items:start}
+.row:last-child{border-bottom:0}
+.row .date{font:13px var(--mono);color:var(--muted);padding-top:2px}
+.row .cover{--w:80px}
+.row .t{font:700 17px/1.25 pp-serif,Georgia,serif;margin:0}
+.row .a{color:var(--muted);font-size:14px;margin:2px 0 0}
+.row .s{font:12px var(--mono);color:var(--muted);margin-top:6px}
+@media (max-width:720px){.bar{position:static}.style{grid-template-columns:minmax(0,1fr)}.style>aside{position:static}.progress{margin-left:0;width:100%}}
+@media (prefers-reduced-motion:no-preference){.cover{transition:transform .15s}.cover:hover{transform:translateY(-2px)}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Галерея переплётов</h1>
+    <p class="lead">Обложки, которые пакет <b>knigopis-pereplet</b> рисует из названия и автора. Книги настоящие, из архива Книгописи. Отметьте у каждого варианта: <b>оставить</b>, <b>доработать</b> или <b>убрать</b>, а в комментарии напишите, что не так. Оценки сохраняются сами, Claude прочитает их перед следующим кругом.</p>
+    <div class="facts" id="facts"></div>
+  </header>
+
+  <div class="bar" role="toolbar" aria-label="Вид">
+    <div class="ctl"><span class="lbl">Размер</span><div class="seg" id="size"><button data-w="80" aria-pressed="true">80 px</button><button data-w="120">120</button><button data-w="200">200</button></div></div>
+    <div class="ctl"><span class="lbl">Корешок</span><div class="seg" id="spine"><button data-s="" aria-pressed="true">случайный</button><button data-s="0">без</button><button data-s="34">толстый</button></div></div>
+    <div class="ctl"><span class="lbl">Возраст</span><div class="seg" id="age"><button data-a="" aria-pressed="true">случайный</button><button data-a="0">новые</button><button data-a="1">старые</button></div></div>
+    <button class="btn" id="shuffle" type="button">Другие книги</button>
+    <div class="ctl"><span class="lbl">Показать</span><div class="seg" id="filter"><button data-f="all" aria-pressed="true">все</button><button data-f="todo">без оценки</button></div></div>
+    <div class="progress" id="progress" aria-live="polite"></div>
+  </div>
+  <p class="note" id="store-note" hidden></p>
+
+  <main id="styles"></main>
+
+  <section class="shelf" aria-labelledby="h-series">
+    <h2 id="h-series">Серии</h2>
+    <p class="note">Стиль выбирает автор: все его книги — одна серия, меняются вариант, краски, корешок и потёртость.</p>
+    <div id="series" class="vars"></div>
+  </section>
+
+  <section class="list" aria-labelledby="h-list">
+    <h2 id="h-list">Как в списке</h2>
+    <p class="note">Список прочитанного, как на сайте: дата, обложка 80 px, название. Стиль здесь выбирается сам, как будет в Книгописи.</p>
+    <div class="diary" id="diary"></div>
+  </section>
+</div>
+
+<script>/*BUNDLE*/</script>
+<script>
+const BOOKS = /*BOOKS*/[];
+const STATS = /*STATS*/{};
+const VOTES = [['keep', 'Оставить'], ['fix', 'Доработать'], ['drop', 'Убрать']];
+const state = { w: 80, spine: undefined, age: undefined, off: 0, filter: 'all' };
+const ratings = new Map(); // id → {vote, note}
+let db = null;
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const total = PP.STYLES.reduce((n, s) => n + s.variants.length, 0);
+
+$('#facts').innerHTML = `<span><b>${PP.STYLES.length}</b> стилей</span><span><b>${total}</b> вариантов</span><span>JS <b>${STATS.gzip}</b> КБ gzip</span><span>шрифты <b>${STATS.fonts}</b> КБ</span><span>~<b>${STATS.ms}</b> мс на обложку</span>`;
+
+// ---------- Обложки ----------
+function opts(extra) {
+  const o = { ...extra };
+  if (state.spine !== undefined) o.spine = state.spine;
+  if (state.age !== undefined) o.age = state.age;
+  return o;
+}
+function coverHtml(book, o) {
+  const c = PP.drawCover({ title: book[0], author: book[1] }, opts(o));
+  return `<div class="cover" title="${esc(book[0])} — ${esc(book[1])}">${c.svg}</div>`;
+}
+const perRow = () => (state.w <= 80 ? 9 : state.w <= 120 ? 6 : 4);
+
+function renderVariant(el) {
+  const { style, v } = el.dataset;
+  const si = PP.STYLES.findIndex((s) => s.id === style);
+  let html = '';
+  for (let i = 0; i < perRow(); i++) html += coverHtml(BOOKS[(state.off * 9 + i * 11 + +v * 17 + si * 29) % BOOKS.length], { style, variant: +v });
+  $('.covers', el).innerHTML = html;
+  el.dataset.done = '1';
+}
+// Рисуем только то, что подъезжает к экрану.
+const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && !e.target.dataset.done && renderVariant(e.target)), { rootMargin: '600px 0px' });
+
+function voteHtml(id) {
+  const r = ratings.get(id) || {};
+  return `<div class="vote" role="group" aria-label="Оценка">${VOTES.map(([v, t]) => `<button type="button" data-id="${id}" data-v="${v}" aria-pressed="${r.vote === v}">${t}</button>`).join('')}</div>`;
+}
+function build() {
+  let html = '';
+  for (const s of PP.STYLES) {
+    html += `<section class="style" id="s-${s.id}"><aside><h2>${esc(s.name)}</h2><div class="sub">${s.id} · ${s.variants.length} вар.</div>${voteHtml(s.id)}<textarea id="n-${s.id}" data-id="${s.id}" rows="2" placeholder="О стиле в целом"></textarea></aside><div class="vars">`;
+    s.variants.forEach((name, v) => {
+      const id = `${s.id}--${v}`;
+      html += `<div class="var" data-style="${s.id}" data-v="${v}" data-id="${id}"><div class="vhead"><h3>${esc(name)}</h3>${voteHtml(id)}</div><div class="covers"></div><textarea id="n-${id}" data-id="${id}" rows="1" placeholder="Комментарий к варианту"></textarea></div>`;
+    });
+    html += '</div></section>';
+  }
+  $('#styles').innerHTML = html;
+  document.querySelectorAll('.var').forEach((el) => io.observe(el));
+  syncRatings();
+  buildSeries();
+  buildDiary();
+}
+function rerender() {
+  document.querySelectorAll('.var').forEach((el) => {
+    delete el.dataset.done;
+    io.unobserve(el);
+    io.observe(el);
+  });
+  buildSeries();
+  buildDiary();
+}
+
+function buildSeries() {
+  const by = {};
+  for (const b of BOOKS) (by[b[1]] ??= []).push(b);
+  const authors = Object.entries(by).filter(([, l]) => l.length >= 4).slice(0, 6);
+  $('#series').innerHTML = authors
+    .map(([a, l]) => {
+      const st = PP.drawCover({ title: l[0][0], author: a }).style;
+      return `<div class="series"><div class="who">${esc(a)} <span>· ${esc(st)}</span></div><div class="covers">${l.slice(0, perRow()).map((b) => coverHtml(b, {})).join('')}</div></div>`;
+    })
+    .join('');
+}
+function buildDiary() {
+  const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  let html = '';
+  for (let i = 0; i < 12; i++) {
+    const b = BOOKS[(state.off * 13 + i * 23 + 5) % BOOKS.length];
+    const c = PP.drawCover({ title: b[0], author: b[1] }, opts({}));
+    html += `<div class="row"><div class="date">${28 - i * 2} ${months[(10 - Math.floor(i / 6)) % 12]}</div><div class="cover">${c.svg}</div><div><p class="t">${esc(b[0])}</p><p class="a">${esc(b[1])}</p><p class="s">${esc(c.style)} · ${esc(c.variant)}</p></div></div>`;
+  }
+  $('#diary').innerHTML = html;
+}
+
+// ---------- Оценки ----------
+function syncRatings() {
+  document.querySelectorAll('.vote button').forEach((b) => b.setAttribute('aria-pressed', String((ratings.get(b.dataset.id) || {}).vote === b.dataset.v)));
+  document.querySelectorAll('textarea[data-id]').forEach((t) => {
+    if (document.activeElement !== t) t.value = (ratings.get(t.dataset.id) || {}).note || '';
+  });
+  document.querySelectorAll('.var').forEach((el) => {
+    const r = ratings.get(el.dataset.id);
+    el.hidden = state.filter === 'todo' && !!(r && r.vote);
+    el.classList.toggle('dim', !!(r && r.vote === 'drop'));
+  });
+  let k = 0, f = 0, d = 0;
+  for (const s of PP.STYLES) s.variants.forEach((_, v) => {
+    const r = ratings.get(`${s.id}--${v}`);
+    if (r?.vote === 'keep') k++;
+    else if (r?.vote === 'fix') f++;
+    else if (r?.vote === 'drop') d++;
+  });
+  $('#progress').innerHTML = `оценено <i>${k + f + d}</i> из ${total} · <i class="k">${k}</i> оставить · <i class="f">${f}</i> доработать · <i class="d">${d}</i> убрать`;
+}
+
+const local = {
+  load() { try { return JSON.parse(localStorage.getItem('pp-ratings') || '{}'); } catch { return {}; } },
+  save() { try { localStorage.setItem('pp-ratings', JSON.stringify(Object.fromEntries(ratings))); } catch {} },
+};
+const writing = new Map();
+async function save(id) {
+  const r = ratings.get(id) || {};
+  local.save();
+  if (!db) return;
+  // Не больше одной записи в документ одновременно.
+  if (writing.get(id)) { writing.set(id, 'again'); return; }
+  writing.set(id, true);
+  try {
+    await db.collection('ratings').doc(id).set({ vote: r.vote || '', note: r.note || '', at: new Date().toISOString() });
+  } catch (e) {
+    showNote('Оценка не сохранилась на сервере (' + (e.code || 'ошибка') + '). Она осталась в этом браузере.');
+  }
+  const again = writing.get(id) === 'again';
+  writing.delete(id);
+  if (again) save(id);
+}
+function showNote(t) { const n = $('#store-note'); n.textContent = t; n.hidden = !t; }
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.vote button');
+  if (!b) return;
+  const id = b.dataset.id;
+  const r = { ...(ratings.get(id) || {}) };
+  r.vote = r.vote === b.dataset.v ? '' : b.dataset.v;
+  ratings.set(id, r);
+  syncRatings();
+  save(id);
+});
+const timers = {};
+document.addEventListener('input', (e) => {
+  const t = e.target.closest('textarea[data-id]');
+  if (!t) return;
+  const id = t.dataset.id;
+  ratings.set(id, { ...(ratings.get(id) || {}), note: t.value });
+  clearTimeout(timers[id]);
+  timers[id] = setTimeout(() => save(id), 700);
+});
+
+// ---------- Панель ----------
+function seg(id, key, attr, parse) {
+  $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    $(id).querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    state[key] = parse(b.dataset[attr]);
+    if (key === 'w') document.documentElement.style.setProperty('--w', state.w + 'px');
+    if (key === 'filter') syncRatings();
+    else rerender();
+  });
+}
+seg('#size', 'w', 'w', Number);
+seg('#spine', 'spine', 's', (x) => (x === '' ? undefined : +x));
+seg('#age', 'age', 'a', (x) => (x === '' ? undefined : +x));
+seg('#filter', 'filter', 'f', String);
+$('#shuffle').addEventListener('click', () => { state.off++; rerender(); });
+
+// ---------- Старт: обложки сразу, оценки — когда ответит хранилище ----------
+for (const [id, r] of Object.entries(local.load())) ratings.set(id, r);
+document.fonts.ready.then(() => Promise.all(['serif', 'old', 'didone', 'antique', 'narrow', 'tech', 'heavy', 'slav', 'mono'].map((k) => document.fonts.load(`16px pp-${k}`, 'Аa').catch(() => null)))).then(build);
+
+(async () => {
+  const use = window.claude && window.claude.use;
+  db = use ? await window.claude.use('db').catch(() => null) : null;
+  if (!db) {
+    showNote('Общее хранилище недоступно: оценки сохраняются только в этом браузере.');
+    return;
+  }
+  const timer = setTimeout(() => showNote('Сохранённые оценки пока не загрузились. Новые отметки сохранятся, когда связь появится.'), 10000);
+  db.collection('ratings').onSnapshot(
+    (snap) => {
+      if (!snap.metadata.fromCache) { clearTimeout(timer); showNote(''); }
+      for (const d of snap.docs) {
+        const x = d.data();
+        const mine = ratings.get(d.id);
+        if (!(mine && timers[d.id] && document.activeElement && document.activeElement.dataset.id === d.id)) ratings.set(d.id, { vote: x.vote || '', note: x.note || '' });
+      }
+      local.save();
+      syncRatings();
+    },
+    (e) => { clearTimeout(timer); showNote('Хранилище оценок отключилось (' + e.code + '). Отметки сохраняются в этом браузере.'); db = null; },
+  );
+})();
+</script>

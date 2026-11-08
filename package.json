@@ -1,0 +1,48 @@
+{
+  "name": "knigopis-pereplet",
+  "version": "0.1.0",
+  "description": "Generative SVG book covers from a title and an author: no images, no network, ~25 KB",
+  "type": "module",
+  "license": "MIT",
+  "author": "gurov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gurov/pereplet.git"
+  },
+  "keywords": [
+    "book",
+    "cover",
+    "svg",
+    "generative",
+    "placeholder"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./fonts.css": "./fonts/fonts.css",
+    "./fonts/*": "./fonts/*"
+  },
+  "files": [
+    "dist",
+    "fonts"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "test": "node --test test/*.test.ts",
+    "fonts": "node scripts/fonts.mjs",
+    "gallery": "node scripts/gallery.mjs",
+    "size": "node scripts/size.mjs",
+    "prepublishOnly": "npm test && npm run build && npm run size"
+  },
+  "devDependencies": {
+    "fontkit": "^2.0.4",
+    "rolldown": "^1.3.0",
+    "subset-font": "^2.9.0",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8"><title>pereplet dev</title>
+<link rel="stylesheet" href="../fonts/fonts.css">
+<style>
+body{margin:12px;background:#f3f1ec;font:13px system-ui,sans-serif;color:#222}
+h2{font:600 15px system-ui;margin:14px 0 6px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.c{width:80px;aspect-ratio:2/3;box-shadow:0 1px 3px #0004;border-radius:2px;overflow:hidden;background:#ddd}
+.c.big{width:200px}
+.c svg{display:block;width:100%;height:100%}
+</style>
+<div id=out></div>
+<script src="dev/pereplet.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const N = +(q.get('n') || 10), BIG = +(q.get('big') || 2), off = +(q.get('off') || 0);
+fetch('books.json').then(r => r.json()).then(async books => {
+  const ids = q.get('style') ? q.get('style').split(',') : PP.STYLES.map(s => s.id);
+  let html = '';
+  for (const id of ids) {
+    const st = PP.STYLES.find(s => s.id === id);
+    st.variants.forEach((v, vi) => {
+      if (q.has('v') && +q.get('v') !== vi) return;
+      html += `<h2>${st.name} — ${v}</h2><div class=row>`;
+      for (let i = 0; i < N + BIG; i++) {
+        const [title, author] = books[(off + i * 7 + vi * 13 + id.length * 31) % books.length];
+        const c = PP.drawCover({ title, author }, { style: id, variant: vi, ...(q.has('age') ? { age: +q.get('age') } : {}) });
+        html += `<div class="c ${i >= N ? 'big' : ''}" title="${title} — ${author}">${c.svg}</div>`;
+      }
+      html += '</div>';
+    });
+  }
+  await Promise.all(['serif','old','didone','antique','narrow','tech','heavy','slav','mono'].map(k => document.fonts.load(`16px pp-${k}`, 'Аa')));
+  out.innerHTML = html;
+  document.title = 'ready';
+});
+</script>
