@@ -1,6 +1,6 @@
 {
   "name": "knigopis-pereplet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Generative SVG book covers from a title and an author: no images, no network, ~26 KB",
   "type": "module",
   "license": "MIT",

@@ -225,7 +225,7 @@ export const series: Style = {
       svg =
         bg(p) +
         rect(0, 0, W, by, col) +
-        texts(c, { x: L, y: 26, w: cw, h: by - 50 }, { font, max: 28, color: on(col), af, align: 'start', at: 'bottom' }) +
+        texts({ ...c, author: '' }, { x: L, y: 26, w: cw, h: by - 50 }, { font, max: 28, color: on(col), af, align: 'start', at: 'bottom' }) +
         stroke(`M${n(L)} ${n(by + 14)}H${n(R)}`, col, 2) +
         txt(fit(c.author || ' ', af, { maxW: cw, lines: 2, max: 11, min: 7 }), L, by + 34, ink);
     } else {
