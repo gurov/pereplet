@@ -1,7 +1,7 @@
 {
   "name": "knigopis-pereplet",
-  "version": "0.1.0",
-  "description": "Generative SVG book covers from a title and an author: no images, no network, ~25 KB",
+  "version": "0.2.0",
+  "description": "Generative SVG book covers from a title and an author: no images, no network, ~26 KB",
   "type": "module",
   "license": "MIT",
   "author": "gurov",
