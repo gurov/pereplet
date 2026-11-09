@@ -1,8 +1,8 @@
 // Математика и архитектура: гильош, мозаики, кривые, рельеф, аркады и витражи.
 // Всё дёшево: сотни точек, а не тысячи; повторы — через <use> и <pattern>.
-import { H, W, byLum, dark, light, lum, mix, n, on, pal, pick, poly, rand, int, seen, smooth, shuffle, wada, type Pt, type Rng } from '../core.ts';
+import { H, W, byLum, gcd, dark, light, lum, mix, n, on, pal, palette, pick, poly, rand, ramp, int, seen, smooth, shuffle, wada, type Pt, type Rng } from '../core.ts';
 import { F, caps } from '../text.ts';
-import { bg, circle, clip, frame, path, pattern, rect, stroke, texts, type Style } from '../cover.ts';
+import { bg, circle, clip, frame, grad, op, path, pattern, rect, sk, stroke, texts, type Style } from '../cover.ts';
 
 // ============ Гильош ============
 
@@ -14,7 +14,7 @@ export const guilloche: Style = {
     const { r, v, L, R, cx, cw, id } = c;
     // Сочетание Вады: бледный оттенок светлой краски — бумага, тёмная и средняя — линии.
     // Иногда наоборот, как на тёмной ценной бумаге.
-    const w = byLum(wada(r, 3));
+    const w = palette(r, 3, 0.3);
     const [b, k1, k2] = r() < 0.2 ? [dark(w[0], 0.55), light(w[2], 0.2), w[1]] : [light(w[2], 0.75), dark(w[0], 0.1), w[1]];
     const font = pick(r, [F.didone, F.serif, F.old, caps(F.antique, 0.12)]);
     const sw = 0.9;
@@ -26,20 +26,22 @@ export const guilloche: Style = {
       for (let i = 1; i < k; i++) s += `<use href="#${id}g${col.slice(1)}" transform="rotate(${n(i * step)} ${n(cx0)} ${n(cy0)})"/>`;
       return s;
     };
+    // Масштаб рисунка: мелкий целиком или крупный, уходящий за край; низ — над текстом.
+    const m = rand(r, 0.6, 1.6);
+    const cy = 188 - 84 * m;
     if (v === 0) {
       // Розетка: волна по окружности, повёрнутая много раз.
-      const cy = 102;
-      const wave = (R0: number, A: number, m: number) => {
+      const wave = (R0: number, A: number) => {
         const p: Pt[] = [];
         for (let i = 0; i < 120; i++) {
           const t = (i / 120) * 2 * Math.PI;
-          const rr = R0 + A * Math.sin(m * t);
+          const rr = (R0 + A * Math.sin(q * t)) * m;
           p.push([cx + rr * Math.cos(t), cy + rr * Math.sin(t)]);
         }
         return poly(p);
       };
-      const m = int(r, 7, 13);
-      art = copies(wave(62, 14, m), cx, cy, 8, k1, 360 / m / 8) + copies(wave(30, 8, m), cx, cy, 6, k2, 360 / m / 6) + circle(cx, cy, 82, 'none', ` stroke="${k1}" stroke-width="1.6"`);
+      const q = int(r, 7, 13);
+      art = copies(wave(62, 14), cx, cy, 8, k1, 360 / q / 8) + copies(wave(30, 8), cx, cy, 6, k2, 360 / q / 6) + circle(cx, cy, 82 * m, 'none', sk(k1, 1.6));
     } else if (v === 1) {
       // Лента: синусы со сдвигом фазы сверху и снизу.
       const band = (y0: number, col: string) => {
@@ -63,13 +65,12 @@ export const guilloche: Style = {
         [1, 2],
         [3, 5],
       ]);
-      const cy = 102;
       let d = '';
       for (let j = 0; j < 4; j++) {
         const p: Pt[] = [];
         for (let i = 0; i <= 130; i++) {
           const t = (i / 130) * 2 * Math.PI;
-          p.push([cx + (cw / 2 - 4) * Math.sin(a * t + j * 0.13), cy + 76 * Math.sin(bb * t)]);
+          p.push([cx + (cw / 2 - 4) * m * Math.sin(a * t + j * 0.13), cy + 76 * m * Math.sin(bb * t)]);
         }
         d += poly(p, false);
       }
@@ -80,8 +81,7 @@ export const guilloche: Style = {
       const rr = pick(r, [2, 3, 4].filter((x) => Rr % x));
       const dd = rand(r, 0.5, 1.2) * rr;
       const turns = rr / gcd(Rr, rr);
-      const cy = 102;
-      const sc = 80 / (Rr - rr + dd);
+      const sc = (80 * m) / (Rr - rr + dd);
       const p: Pt[] = [];
       for (let i = 0; i <= turns * 70; i++) {
         const t = (i / 70) * 2 * Math.PI;
@@ -92,14 +92,11 @@ export const guilloche: Style = {
     return {
       svg: bg(b) + art + frame(L - 6, 10, R - L + 12, H - 20, k1, 1.2) + frame(L - 2, 14, R - L + 4, H - 28, k2, 0.8) + texts(c, tb, { font, max: 22, lines: 3, color: on(b, dark(k1, 0.3), light(k1, 0.6)), ac: k1, af: caps(F.serif, 0.1), as: 8.5 }),
       tex: 'grain',
-      spine: 'cloth',
-      sc: dark(k1, 0.3),
       age: 0.6,
       base: b,
     };
   },
 };
-const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
 const j2 = (a: string, b: string, r: Rng) => (r() < 0.5 ? a : b);
 
 // ============ Мозаики ============
@@ -188,43 +185,50 @@ export const tiling: Style = {
   variants: ['Пенроуз', 'Вороной', 'Трюше', 'Кубы'],
   draw(c) {
     const { r, v, L, cw, id } = c;
-    // Сочетание Вады из четырёх, от тёмного к светлому.
+    // Сочетание Вады из четырёх или близкие оттенки одной краски, от тёмной к светлой.
     // Мозаика — это большие плоскости: краски приглушены, чтобы не резали глаз.
-    const [k0, k1, k2, k3] = byLum(wada(r, 4).map((x) => mix(x, '#857c70', 0.22)));
+    const [k0, k1, k2, k3] = palette(r, 4, 0.45).map((x) => mix(x, '#857c70', 0.22));
+    // Плавный переход через все четыре краски: t от 0 до 1.
+    const tone = (t: number) => (t < 1 / 3 ? mix(k0, k1, t * 3) : t < 2 / 3 ? mix(k1, k2, t * 3 - 1) : mix(k2, k3, Math.min(1, t * 3 - 2)));
     const font = pick(r, [F.heavy, F.tech, caps(F.narrow, 0.05), F.serif]);
     let art = '';
     if (v === 0) {
-      const p = penrose(rand(r, 60, 140), rand(r, 80, 220), 260, 3);
+      // Центр где угодно; чем больше радиус, тем крупнее плитки и тем меньше их видно.
+      const px = rand(r, 0, W);
+      const py = rand(r, 0, H);
+      const p = penrose(px, py, Math.hypot(Math.max(px, W - px), Math.max(py, H - py)) * rand(r, 1.05, 2.2), 3);
       art = path(p.thin, k1) + path(p.thick, k2) + stroke(p.edges, r() < 0.5 ? k3 : k0, 1.6, ' stroke-linejoin="round"');
     } else if (v === 1) {
-      const cells = voronoi(seeds(r, 4, 6, [-10, -10, W + 10, H + 10]), [-10, -10, W + 10, H + 10]);
-      art = cells.map((cl) => path(poly(cl), [k0, k1, k2, k3][int(r, 0, 3)])).join('') + stroke(cells.map((cl) => poly(cl)).join(''), light(k3, 0.5), 3, ' stroke-linejoin="round"');
+      // От крупных клеток к мелким; краска клетки меняется плавно сверху вниз.
+      const m = int(r, 2, 6);
+      const box: [number, number, number, number] = [-10, -10, W + 10, H + 10];
+      const cells = voronoi(seeds(r, m, Math.round(m * 1.5), box), box);
+      const dir = r() < 0.5;
+      art = cells.map((cl) => path(poly(cl), tone(Math.min(1, Math.max(0, (dir ? cl[0][1] : H - cl[0][1]) / H + rand(r, -0.15, 0.15)))))).join('') + stroke(cells.map((cl) => poly(cl)).join(''), light(k3, 0.5), 10 / m + 1, ' stroke-linejoin="round"');
     } else if (v === 2) {
-      // Трюше: в каждой клетке две дуги, повёрнутые случайно.
-      const s = pick(r, [25, 33.4, 40]);
+      // Трюше: в каждой клетке две дуги, повёрнутые случайно; клетка от мелкой до крупной.
+      const s = pick(r, [24, 32, 44, 60]);
+      const h = s / 2;
       let d = '';
       for (let y = 0; y < H; y += s)
-        for (let x = 0; x < W; x += s) {
-          const h = s / 2;
-          d += r() < 0.5 ? `M${n(x + h)} ${n(y)}A${n(h)} ${n(h)} 0 0 1 ${n(x)} ${n(y + h)}M${n(x + s)} ${n(y + h)}A${n(h)} ${n(h)} 0 0 0 ${n(x + h)} ${n(y + s)}` : `M${n(x + h)} ${n(y)}A${n(h)} ${n(h)} 0 0 0 ${n(x + s)} ${n(y + h)}M${n(x)} ${n(y + h)}A${n(h)} ${n(h)} 0 0 1 ${n(x + h)} ${n(y + s)}`;
-        }
-      art = bg(k0) + stroke(d, k2, s * 0.28) + stroke(d, k3, s * 0.08);
+        for (let x = 0; x < W; x += s)
+          d += r() < 0.5 ? `M${n(x + h)} ${n(y)}a${n(h)} ${n(h)} 0 0 1 ${n(-h)} ${n(h)}M${n(x + s)} ${n(y + h)}a${n(h)} ${n(h)} 0 0 0 ${n(-h)} ${n(h)}` : `M${n(x + h)} ${n(y)}a${n(h)} ${n(h)} 0 0 0 ${n(h)} ${n(h)}M${n(x)} ${n(y + h)}a${n(h)} ${n(h)} 0 0 1 ${n(h)} ${n(h)}`;
+      art = grad(id + 'g', k0, tone(0.3), 1, 1) + stroke(d, k2, s * 0.28) + stroke(d, k3, s * 0.08);
     } else {
-      // Кубы: ромбы трёх тонов — объём из плоской мозаики.
-      const s = pick(r, [16, 20, 24]);
+      // Кубы: ромбы трёх тонов — объём из плоской мозаики, от мелких до крупных.
+      const s = pick(r, [10, 14, 20, 28, 40]);
       const w = s * Math.sqrt(3);
       const cube = (x: number, y: number) =>
         path(`M${n(x)} ${n(y)}l${n(w / 2)} ${n(s / 2)} ${n(-w / 2)} ${n(s / 2)} ${n(-w / 2)} ${n(-s / 2)}z`, k3) +
         path(`M${n(x - w / 2)} ${n(y + s / 2)}l${n(w / 2)} ${n(s / 2)}v${s}l${n(-w / 2)} ${n(-s / 2)}z`, k1) +
         path(`M${n(x)} ${n(y + s)}l${n(w / 2)} ${n(-s / 2)}v${s}l${n(-w / 2)} ${n(s / 2)}z`, k0);
-      art = pattern(id + 'c', w, 3 * s, cube(w / 2, 0) + cube(0, 1.5 * s) + cube(w, 1.5 * s) + cube(w / 2, 3 * s) + cube(0, -1.5 * s) + cube(w, -1.5 * s)) + rect(0, 0, W, H, `url(#${id}c)`);
+      art = pattern(id + 'c', w, 3 * s, cube(w / 2, 0) + cube(0, 1.5 * s) + cube(w, 1.5 * s) + cube(w / 2, 3 * s) + cube(0, -1.5 * s) + cube(w, -1.5 * s), ` x="${n(rand(r, 0, w))}"`) + rect(0, 0, W, H, `url(#${id}c)`);
     }
-    const by = rand(r, 0, 1) < 0.5 ? 26 : 196;
+    const by = r() < 0.5 ? 26 : 196;
     const plate = lum(k3) > 0.6 ? k3 : '#f4f1ea';
     return {
       svg: bg(k0) + art + rect(L - 6, by, cw + 12, 80, plate) + frame(L - 6, by, cw + 12, 80, dark(k0, 0.2), 2) + texts(c, { x: L + 2, y: by + 10, w: cw - 4, h: 60 }, { font, max: 20, lines: 3, color: on(plate), ac: seen([k1, k0], plate)[0], as: 8.5 }),
       tex: 'grain',
-      spine: 'tone',
       age: 0.3,
       base: k0,
     };
@@ -276,62 +280,67 @@ export const curves: Style = {
   variants: ['Гильберт', 'Подсолнух', 'Золотое сечение', 'Дракон', 'Роза'],
   draw(c) {
     const { r, v, L, R, cx, cw } = c;
-    // Фон — самая тёмная или самая светлая краска сочетания Вады, линии — остальные.
-    const w = byLum(wada(r, 4));
+    // Фон — самая тёмная или самая светлая краска сочетания Вады (или близких оттенков), линии — остальные.
+    const w = palette(r, 4, 0.35);
     const b = r() < 0.4 ? dark(w[0], 0.35) : light(w[3], 0.55);
     const [f1, f2, f3] = seen(shuffle(r, w), b);
     const ink = on(b);
     const font = pick(r, [F.tech, caps(F.narrow, 0.05), F.serif, F.heavy]);
-    const cy = 110;
+    // Рисунок любого масштаба: мелкий целиком или крупный кусок; ниже черты — только текст.
+    const m = rand(r, 0.6, 1.8);
+    const fx = cx + rand(r, -40, 40) * m;
+    const cy = 100 + rand(r, -30, 30) * m;
     let art = '';
     if (v === 0) {
-      const o = pick(r, [3, 4]);
-      const size = cw - 8;
+      const o = pick(r, [3, 4, 5]);
+      const size = 150 * m;
       const step = size / (2 ** o - 1);
-      art = stroke(`M${n(cx - size / 2)} ${n(cy - size / 2)}` + hilbert(o, +n(step)), f1, o === 3 ? 6 : 3.4, ' stroke-linecap="square"');
+      art = stroke(`M${n(fx - size / 2)} ${n(cy - size / 2)}` + hilbert(o, +n(step)), f1, Math.max(1.4, step * 0.4), ' stroke-linecap="square"');
     } else if (v === 1) {
-      // Подсолнух: золотой угол; точки — отрезки нулевой длины с круглыми концами.
+      // Подсолнух: золотой угол; точки — отрезки нулевой длины с круглыми концами. Кольца — плавно от краски к краске.
       const ds = ['', '', '', ''];
-      const k = 150;
-      const sc = 6.2;
+      const sc = 3.4 + 3.4 * m;
+      const k = Math.min(330, Math.round((150 / sc) ** 2));
       for (let i = 1; i <= k; i++) {
         const a = i * 2.39996;
         const rr = sc * Math.sqrt(i);
-        ds[Math.min(3, Math.floor((i / k) * 4))] += `M${n(cx + rr * Math.cos(a))} ${n(cy + rr * Math.sin(a))}h0`;
+        ds[Math.min(3, Math.floor((i / k) * 4))] += `M${n(fx + rr * Math.cos(a))} ${n(cy + rr * Math.sin(a))}h0`;
       }
-      art = ds.map((d, i) => stroke(d, [f1, f2, f1, f3][i], 3 + i * 1.3, ' stroke-linecap="round"')).join('');
+      const cs = ramp(f1, f2, 4);
+      art = ds.map((d, i) => stroke(d, cs[i], sc * (0.5 + i * 0.2), ' stroke-linecap="round"')).join('');
     } else if (v === 2) {
       // Квадраты золотого прямоугольника и дуги спирали.
-      let x = L - 6;
-      let y = 18;
-      let w = cw + 12;
-      let h = w / 1.618;
+      let x = fx - 85 * m;
+      let y = cy - 75 * m;
+      let ww = 190 * m;
+      let h = ww / 1.618;
       let out = '';
       let arcs = '';
       const fills = [f1, b, f2, light(f3, 0.2), b, f1, f2, b];
       for (let i = 0; i < 8; i++) {
-        const s = Math.min(w, h);
+        const s = Math.min(ww, h);
         const k = i % 4;
-        const [sx, sy] = k === 0 ? [x, y] : k === 1 ? [x + w - s, y] : k === 2 ? [x + w - s, y + h - s] : [x, y + h - s];
-        out += rect(sx, sy, s, s, fills[i], ` stroke="${ink}" stroke-width="1.6"`);
+        const [sx, sy] = k === 0 ? [x, y] : k === 1 ? [x + ww - s, y] : k === 2 ? [x + ww - s, y + h - s] : [x, y + h - s];
+        out += rect(sx, sy, s, s, fills[i], sk(ink, 1.6));
         const [ax, ay, bx, by] = k === 0 ? [sx, sy + s, sx + s, sy] : k === 1 ? [sx, sy, sx + s, sy + s] : k === 2 ? [sx + s, sy, sx, sy + s] : [sx + s, sy + s, sx, sy];
         arcs += `M${n(ax)} ${n(ay)}A${n(s)} ${n(s)} 0 0 1 ${n(bx)} ${n(by)}`;
         if (k === 0) {
           x += s;
-          w -= s;
+          ww -= s;
         } else if (k === 1) {
           y += s;
           h -= s;
-        } else if (k === 2) w -= s;
+        } else if (k === 2) ww -= s;
         else h -= s;
       }
       art = out + stroke(arcs, ink, 2.2);
     } else if (v === 3) {
-      const o = 9;
-      const step = 4.2;
-      art = stroke(`M${n(cx - 30)} ${n(cy + 10)}` + dragon(o, step), f1, 2.2, ` stroke-linejoin="round" transform="rotate(${int(r, 0, 3) * 90 + 45} ${n(cx)} ${n(cy)})"`);
+      // Дракон: от целого до крупного фрагмента.
+      const o = int(r, 9, 11);
+      const step = (rand(r, 0.8, 2.6) * 120) / 2 ** (o / 2);
+      art = stroke(`M${n(fx - 30 * m)} ${n(cy + 10 * m)}` + dragon(o, +n(step)), f1, Math.max(1.2, step * 0.5), ` stroke-linejoin="round" transform="rotate(${int(r, 0, 3) * 90 + 45} ${n(fx)} ${n(cy)})"`);
     } else {
-      // Роза r = cos(kθ).
+      // Роза r = cos(kθ), полупрозрачная.
       const [p, q] = pick(r, [
         [3, 1],
         [5, 2],
@@ -345,15 +354,16 @@ export const curves: Style = {
       const k = Math.round(360 / turns);
       for (let i = 0; i <= k * turns; i++) {
         const t = (i / k) * Math.PI * 2;
-        const rr = 80 * Math.cos((p / q) * t);
-        pts.push([cx + rr * Math.cos(t), cy + rr * Math.sin(t)]);
+        const rr = 80 * m * Math.cos((p / q) * t);
+        pts.push([fx + rr * Math.cos(t), cy + rr * Math.sin(t)]);
       }
-      art = path(poly(pts), f1, ' fill-rule="evenodd" opacity=".9"') + stroke(poly(pts), ink, 1.2);
+      art = path(poly(pts), f1, ` fill-rule="evenodd" opacity="${n(rand(r, 0.55, 0.9))}"`) + stroke(poly(pts), ink, 1.2);
     }
     return {
-      svg: bg(b) + art + texts(c, { x: L, y: 214, w: cw, h: 70 }, { font, max: 22, lines: 3, color: ink, align: 'start', ac: f1, as: 9 }) + stroke(`M${n(L)} 206H${n(R)}`, ink, 1, ' opacity=".5"'),
+      svg: bg(b) + clip(c.id + 'z', `M0 0H${W}V200H0Z`, art) + texts(c, { x: L, y: 214, w: cw, h: 70 }, { font, max: 22, lines: 3, color: ink, align: 'start', ac: f1, as: 9 }) + stroke(`M${n(L)} 206H${n(R)}`, ink, 1, ' opacity=".5"'),
       tex: 'grain',
-      spine: 'tone',
+      // Рамка — как у гравюры; золотому сечению она мешала бы квадратами у края.
+      frame: v !== 2 && r() < 0.3 ? mix(ink, b, 0.4) : undefined,
       age: 0.2,
       base: b,
     };
@@ -373,11 +383,13 @@ export const topo: Style = {
     const font = pick(r, [caps(F.narrow, 0.06), F.serif, F.tech]);
     let art = '';
     let tb = { x: L, y: 214, w: cw, h: 72 };
+    let fr: string | undefined;
     if (v === 0) {
-      // Изолинии вокруг двух вершин: полярные кривые с плавным шумом.
+      // Изолинии вокруг двух вершин: полярные кривые с плавным шумом; шаг от частого до редкого.
+      const sp = rand(r, 8, 17);
       const peaks: [number, number, number][] = [
-        [rand(r, 50, 150), rand(r, 60, 140), 11],
-        [rand(r, 20, 180), rand(r, 150, 200), 6],
+        [rand(r, 30, 170), rand(r, 50, 150), Math.round(130 / sp)],
+        [rand(r, 0, 200), rand(r, 140, 210), Math.round(70 / sp)],
       ];
       for (const [px, py, k] of peaks) {
         const ph = [rand(r, 0, 6), rand(r, 0, 6), rand(r, 0, 6)];
@@ -385,21 +397,28 @@ export const topo: Style = {
           const p: Pt[] = [];
           for (let j = 0; j < 12; j++) {
             const t = (j / 12) * 2 * Math.PI;
-            const rr = i * 11 * (1 + 0.22 * Math.sin(2 * t + ph[0] + i * 0.15) + 0.12 * Math.sin(3 * t + ph[1]) + 0.08 * Math.sin(5 * t + ph[2] - i * 0.1));
+            const rr = i * sp * (1 + 0.22 * Math.sin(2 * t + ph[0] + i * 0.15) + 0.12 * Math.sin(3 * t + ph[1]) + 0.08 * Math.sin(5 * t + ph[2] - i * 0.1));
             p.push([px + rr * Math.cos(t), py + rr * Math.sin(t) * 0.8]);
           }
           art += stroke(smooth(p), i % 5 === 0 ? acc : ink, i % 5 === 0 ? 2 : 1.2);
         }
       }
       art = clip(c.id + 'c', `M0 0H${W}V204H0Z`, art);
+      // Как у карты: иногда рамка по краю.
+      if (r() < 0.4) fr = ink;
     } else if (v === 1) {
-      // Хребты: слои гор от светлых к тёмным.
-      art = circle(rand(r, 40, 160), rand(r, 100, 116), rand(r, 14, 20), acc);
-      for (let i = 0; i < 6; i++) {
-        const y0 = 128 + i * 22;
+      // Хребты: слои гор плавно от светлых к тёмным, иногда с уходом в другую краску.
+      // Солнце разного размера, наполовину за горами, ниже текста.
+      const k = int(r, 5, 7);
+      const sr = rand(r, 10, 44);
+      art = circle(rand(r, 0, W), rand(r, 96 + sr * 0.5, 150), sr, acc, op(rand(r, 0.6, 1)));
+      const cs = ramp(light(mix(ink, acc, rand(r, 0, 0.6)), 0.7), ink, k);
+      for (let i = 0; i < k; i++) {
+        const y0 = 128 + (i * 130) / k;
+        const a = rand(r, 10, 40);
         const p: Pt[] = [];
-        for (let x = -20; x <= W + 20; x += 20) p.push([x, y0 - Math.abs(Math.sin(x * 0.03 + i * 1.7)) * rand(r, 10, 40)]);
-        art += path(poly(p, false) + `L${W + 20} ${H}L-20 ${H}Z`, i ? light(ink, 0.6 - i * 0.12) : light(ink, 0.7));
+        for (let x = -20; x <= W + 20; x += 20) p.push([x, y0 - Math.abs(Math.sin(x * 0.03 + i * 1.7)) * a]);
+        art += path(poly(p, false) + `L${W + 20} ${H}L-20 ${H}Z`, cs[i]);
       }
       tb = { x: L, y: 18, w: cw, h: 62 };
     } else {
@@ -416,7 +435,7 @@ export const topo: Style = {
         art += path(poly(p, false) + `L${W + 10} ${y0 + 30}L-10 ${y0 + 30}Z`, b) + stroke(poly(p, false), i % 4 ? ink : acc, 1.3);
       }
     }
-    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 3, color: on(b, '#1d1b19', '#f2ece0'), align: 'start', ac: acc, as: 9 }), tex: 'grain', spine: 'tone', age: 0.25, base: b };
+    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 3, color: on(b, '#1d1b19', '#f2ece0'), align: 'start', ac: acc, as: 9 }), tex: 'grain', frame: fr, age: 0.25, base: b };
   },
 };
 
@@ -427,74 +446,65 @@ const STONE = pal('e6dccb d9cdb8 ece4d6 cfc6b8');
 export const arch: Style = {
   id: 'arch',
   name: 'Архитектура',
-  variants: ['Аркада', 'Анфилада', 'Бетон', 'Витраж'],
+  variants: ['Бетон', 'Витраж', 'Фасад'],
   draw(c) {
-    const { r, v, L, cx, cw } = c;
+    const { r, v, L, cx, cw, id } = c;
     const font = pick(r, [caps(F.narrow, 0.06), F.heavy, caps(F.antique, 0.12), F.serif]);
     let b = pick(r, STONE);
     let ink = '#2a2622';
-    let acc = pick(r, ['#b5562f', '#2f5d7a', '#7a2e3b', '#3d6b4a']);
+    let acc = pick(r, ['#b5562f', '#2f5d7a', '#7a2e3b', '#3d6b4a', '#c99a2e']);
     let art = '';
     let tb = { x: L, y: 18, w: cw, h: 74 };
     if (v === 0) {
-      // Аркада: два яруса проёмов.
-      const row = (y: number, k: number, h: number, col: string) => {
-        let d = '';
-        const w = (W + 20) / k;
-        for (let i = 0; i < k; i++) {
-          const x = -10 + i * w + w * 0.18;
-          const ww = w * 0.64;
-          d += `M${n(x)} ${n(y + h)}V${n(y + ww / 2)}a${n(ww / 2)} ${n(ww / 2)} 0 0 1 ${n(ww)} 0V${n(y + h)}Z`;
-        }
-        return path(d, col);
-      };
-      const k = int(r, 3, 5);
-      art = rect(0, 110, W, H - 110, dark(b, 0.06)) + row(118, k * 2, 46, dark(acc, 0.35)) + row(176, k, 104, dark(acc, 0.5)) + rect(0, 168, W, 5, ink, ' opacity=".5"') + rect(0, 280, W, 20, dark(b, 0.2));
-    } else if (v === 1) {
-      // Анфилада: арки уходят в глубину.
-      const vx = cx + rand(r, -14, 14);
-      const vy = rand(r, 170, 200);
-      b = pick(r, ['#2a2622', '#1f2a33', '#2e2430']);
-      ink = '#efe6d6';
-      for (let i = 0; i < 7; i++) {
-        const k = 0.72 ** i;
-        const w = 150 * k;
-        const h = 220 * k;
-        const x = vx - w / 2;
-        const y = vy + (H - 10 - vy) * k - h;
-        art += path(`M${n(x)} ${n(y + h)}V${n(y + w / 2)}a${n(w / 2)} ${n(w / 2)} 0 0 1 ${n(w)} 0V${n(y + h)}Z`, i % 2 ? b : light(b, 0.12 + i * 0.05), ` stroke="${acc}" stroke-width="${n(2.5 * k + 0.6)}"`);
-      }
-      art += circle(vx, vy - 12, 5, light(acc, 0.4));
-      tb = { x: L, y: 16, w: cw, h: 60 };
-    } else if (v === 2) {
-      // Бетон: модули с глубокими тенями, одно окно светится.
+      // Бетон: модули с глубокими тенями, одно окно светится; модуль от мелкого до крупного.
       b = pick(r, ['#b9b5ad', '#a8a49c', '#c4bfb5']);
-      const s = 30;
-      const lit = int(r, 0, 20);
-      let i = 0;
-      for (let y = 100; y < H; y += s)
-        for (let x = -6; x < W; x += s) {
-          art += rect(x, y, s - 3, s - 3, light(b, 0.12)) + path(`M${n(x + 6)} ${n(y + 8)}h${s - 15}v${s - 15}h${15 - s}z`, i === lit ? acc : dark(b, 0.45)) + path(`M${n(x + 6)} ${n(y + 8)}h${s - 15}l-4 4h${23 - s}v${s - 19}l-4 4z`, '#000', ' opacity=".25"');
-          i++;
-        }
-      art += rect(0, 92, W, 8, dark(b, 0.3));
-    } else {
-      // Витраж: стрельчатое окно, стёкла — клетки Вороного.
+      const s = pick(r, [18, 26, 34, 48, 64]);
+      const x0 = rand(r, -s, 0);
+      const m = `<rect width="${n(s * 0.9)}" height="${n(s * 0.9)}" fill="${light(b, 0.12)}"/><path d="M${n(s * 0.2)} ${n(s * 0.27)}h${n(s * 0.5)}v${n(s * 0.5)}h${n(-s * 0.5)}z" fill="${dark(b, 0.45)}"/><path d="M${n(s * 0.2)} ${n(s * 0.27)}h${n(s * 0.5)}l-${n(s * 0.13)} ${n(s * 0.13)}h${n(-s * 0.37)}v${n(s * 0.37)}l-${n(s * 0.13)} ${n(s * 0.13)}z" fill="#000" opacity=".25"/>`;
+      const lx = x0 + s * int(r, 1, Math.floor(W / s) - 1);
+      const ly = 100 + s * int(r, 0, Math.floor(190 / s) - 1);
+      art =
+        pattern(id + 'b', s, s, m, ` x="${n(x0)}" y="100"`) +
+        rect(0, 100, W, H - 100, `url(#${id}b)`) +
+        rect(lx + s * 0.2, ly + s * 0.27, s * 0.5, s * 0.5, acc) +
+        rect(0, 92, W, 8, dark(b, 0.3));
+    } else if (v === 1) {
+      // Витраж: круглое окно-роза или прямоугольная рама, стёкла — клетки Вороного.
       b = pick(r, ['#2a2622', '#1d1f2a', '#2b2320']);
       ink = '#efe6d6';
       const w = cw - 6;
       const x0 = cx - w / 2;
-      const top = 18;
-      const bot = 200;
-      const win = `M${n(x0)} ${bot}V${n(top + w * 0.6)}Q${n(x0)} ${top + 12} ${n(cx)} ${top}Q${n(x0 + w)} ${top + 12} ${n(x0 + w)} ${n(top + w * 0.6)}V${bot}Z`;
-      const cells = voronoi(seeds(r, 3, 5, [x0, top, x0 + w, bot]), [x0, top, x0 + w, bot]);
-      const jewel = wada(r, 4);
-      const glass = cells.map((cl) => path(poly(cl), pick(r, jewel))).join('') + stroke(cells.map((cl) => poly(cl)).join(''), '#141414', 3.2, ' stroke-linejoin="round"');
-      art = clip(c.id + 'w', win, glass + `<linearGradient id="${c.id}gl" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></linearGradient>` + rect(x0, top, w, bot - top, `url(#${c.id}gl)`)) + path(win, 'none', ` stroke="#141414" stroke-width="5"`);
+      const round = r() < 0.5;
+      const top = round ? 110 - w / 2 : 18;
+      const bot = round ? 110 + w / 2 : 200;
+      const win = round ? `M${n(x0)} 110a${n(w / 2)} ${n(w / 2)} 0 1 0 ${n(w)} 0a${n(w / 2)} ${n(w / 2)} 0 1 0 ${n(-w)} 0Z` : `M${n(x0)} ${top}H${n(x0 + w)}V${bot}H${n(x0)}Z`;
+      const m = int(r, 2, 5);
+      const cells = voronoi(seeds(r, m, Math.round(m * 1.6), [x0, top, x0 + w, bot]), [x0, top, x0 + w, bot]);
+      const jewel = palette(r, 4, 0.3);
+      const glass = cells.map((cl) => path(poly(cl), pick(r, jewel))).join('') + stroke(cells.map((cl) => poly(cl)).join(''), '#141414', 9 / m + 1, ' stroke-linejoin="round"');
+      art = clip(id + 'w', win, glass + `<linearGradient id="${id}gl" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></linearGradient>` + rect(x0, top, w, bot - top, `url(#${id}gl)`)) + path(win, 'none', ` stroke="#141414" stroke-width="5"`);
       acc = '#e0a526';
       tb = { x: L, y: 214, w: cw, h: 70 };
+    } else {
+      // Фасад: стеклянная стена, в стёклах плавно переливается небо; шаг рам от мелкого до крупного.
+      const sky = palette(r, 3, 0.6);
+      const k = int(r, 3, 8);
+      const s = W / k;
+      for (let y = 104; y < H; y += s * 1.3)
+        for (let x = 0; x < W; x += s) {
+          const t = Math.min(1, Math.max(0, (x + y - 104) / 380 + rand(r, -0.1, 0.1)));
+          art += rect(x, y, s, s * 1.3, t < 0.5 ? mix(sky[0], sky[1], t * 2) : mix(sky[1], sky[2], t * 2 - 1));
+        }
+      let d = '';
+      for (let x = s; x < W; x += s) d += `M${n(x)} 104V${H}`;
+      for (let y = 104; y < H; y += s * 1.3) d += `M0 ${n(y)}H${W}`;
+      // Блик по стеклу наискосок.
+      art +=
+        `<linearGradient id="${id}gl" x2="1" y2=".6"><stop offset=".2" stop-color="#fff" stop-opacity="0"/><stop offset=".45" stop-color="#fff" stop-opacity=".35"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></linearGradient>` +
+        rect(0, 104, W, H - 104, `url(#${id}gl)`) +
+        stroke(d, dark(b, 0.6), 1 + 5 / k) +
+        rect(0, 96, W, 8, dark(b, 0.3));
     }
-    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 3, color: ink, align: 'start', ac: acc, as: 9, gap: 6 }), tex: 'grain', spine: 'tone', age: 0.4, base: b };
+    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 3, color: ink, align: 'start', ac: acc, as: 9, gap: 6 }), tex: 'grain', age: 0.4, base: b };
   },
 };
-

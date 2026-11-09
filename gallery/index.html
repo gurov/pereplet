@@ -42,9 +42,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .k{color:var(--keep)}.f{color:var(--fix)}.d{color:var(--drop)}
 .note{font-size:13px;color:var(--muted);padding-block:6px 0;margin:0}
 .style{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px 24px;padding-block:26px;border-bottom:1px solid var(--line)}
-.style>aside{display:grid;gap:8px;align-content:start;position:sticky;top:64px}
+.style>aside{display:grid;gap:8px;align-content:start;position:sticky;top:64px;min-width:0}
 .style h2{font:600 24px/1.05 var(--display);text-transform:uppercase;letter-spacing:.03em;margin:0}
 .style .sub{font:12px var(--mono);color:var(--muted)}
+.style .what{font-size:13px;line-height:1.4;color:var(--muted);margin:0}
+.style .what b{color:var(--accent);font-weight:600}
 .vars{display:grid;gap:18px;min-width:0}
 .var{display:grid;gap:8px;min-width:0}
 .vhead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
@@ -52,7 +54,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px soli
 .covers{display:flex;flex-wrap:wrap;gap:12px;min-height:calc(var(--w)*1.5)}
 .cover{width:var(--w);max-width:100%;aspect-ratio:2/3;border-radius:1px 3px 3px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.25),0 3px 8px rgba(0,0,0,.12);background:var(--line);flex:none}
 .cover svg{display:block;width:100%;height:100%}
-.vote{display:inline-flex;gap:4px}
+.vote{display:inline-flex;flex-wrap:wrap;gap:4px}
 .vote button{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;font:12px var(--body);padding:3px 10px;cursor:pointer}
 .vote button[aria-pressed="true"][data-v="keep"]{background:var(--keep);border-color:var(--keep);color:var(--bg)}
 .vote button[aria-pressed="true"][data-v="fix"]{background:var(--fix);border-color:var(--fix);color:var(--bg)}
@@ -81,13 +83,12 @@ textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height
   <header class="top">
     <h1>Галерея переплётов</h1>
     <p class="lead">Обложки, которые пакет <b>knigopis-pereplet</b> рисует из названия и автора. Книги настоящие, из архива Книгописи. Отметьте у каждого варианта: <b>оставить</b>, <b>доработать</b> или <b>убрать</b>, а в комментарии напишите, что не так. Оценки сохраняются сами, Claude прочитает их перед следующим кругом.</p>
-    <p class="lead"><b>Круг второй.</b> Убраны «Мемфис» и варианты с отметкой «убрать». Корешок теперь либо толстый, либо его нет. Цвета мрамора, мозаик, кривых, рельефа, гильоша, орнамента, «Севера», звёзд, витражей, тканей и серий взяты из сочетаний Вады Сандзо («A Dictionary of Color Combinations», 1933). Оценки первого круга сохранены отдельно.</p>
+    <p class="lead"><b>Круг четвёртый.</b> Вернулись элементы переплёта: узкая полоса корешка (всегда одной ширины) и треугольные уголки в цвет переплёта. Рамки, наклейки, линейки, эмблемы и украшения углов выбираются независимо, поэтому сочетаний стало много. Оформление переходит и в другие стили, но только туда, где оно к месту: рамка — к листу, папоротнику, изолиниям и кривым; корешок и уголки — к орнаменту, мрамору, манускрипту, модерну, «Звёздам», ар-деко и Востоку. Убраны «Квадраты» и «Обои», «Клин» стал случайным, этикетка гербария — по центру. Что изменилось — под названием стиля. Оценки прошлых кругов сохранены отдельно.</p>
     <div class="facts" id="facts"></div>
   </header>
 
   <div class="bar" role="toolbar" aria-label="Вид">
     <div class="ctl"><span class="lbl">Размер</span><div class="seg" id="size"><button data-w="80" aria-pressed="true">80 px</button><button data-w="120">120</button><button data-w="200">200</button></div></div>
-    <div class="ctl"><span class="lbl">Корешок</span><div class="seg" id="spine"><button data-s="" aria-pressed="true">случайный</button><button data-s="0">без</button><button data-s="34">толстый</button></div></div>
     <div class="ctl"><span class="lbl">Возраст</span><div class="seg" id="age"><button data-a="" aria-pressed="true">случайный</button><button data-a="0">новые</button><button data-a="1">старые</button></div></div>
     <button class="btn" id="shuffle" type="button">Другие книги</button>
     <div class="ctl"><span class="lbl">Показать</span><div class="seg" id="filter"><button data-f="all" aria-pressed="true">все</button><button data-f="todo">без оценки</button></div></div>
@@ -99,7 +100,7 @@ textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height
 
   <section class="shelf" aria-labelledby="h-series">
     <h2 id="h-series">Серии</h2>
-    <p class="note">Стиль выбирает автор: все его книги — одна серия, меняются вариант, краски, корешок и потёртость.</p>
+    <p class="note">Стиль выбирает автор: все его книги — одна серия, меняются вариант, краски, оформление и потёртость.</p>
     <div id="series" class="vars"></div>
   </section>
 
@@ -114,9 +115,25 @@ textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height
 <script>
 const BOOKS = /*BOOKS*/[];
 const STATS = /*STATS*/{};
-const COL = 'round2'; // оценки второго круга; первый — в 'ratings'
+const COL = 'round4'; // оценки четвёртого круга; прошлые — в 'ratings', 'round2', 'round3'
+// Что изменилось в четвёртом круге.
+const WHAT = {
+  cloth: 'Вернулись узкая полоса корешка и треугольные уголки. Рамки шести видов, украшения углов, разделители, эмблемы, четыре набора линеек, наклейки шести форм — бумажные и кожаные; всё сочетается независимо.',
+  marble: 'Полукожаный переплёт: полоса корешка и уголки из кожи. Наклейка шести форм.',
+  ornament: 'Узорная бумага с тканевым или кожаным корешком и уголками, как у книжных серий. Плашка в середине — любой из шести форм.',
+  botany: '«Обои» убраны. У листа и папоротника иногда рамка, у всех — полоса корешка и уголки. Этикетка гербария по центру.',
+  avant: '«Клин»: круг, клин и балки каждый раз в новом месте, балки под любым углом.',
+  bauhaus: '«Квадраты» убраны.',
+  manuscript: 'Кожаный корешок; у «Плетёнки» иногда уголки (у каймы — нет, они закрыли бы золотые квадраты).',
+  nouveau: 'Полоса корешка; у «Стеблей» иногда уголки.',
+  east: 'Иногда полоса корешка, как у прошитых книг.',
+  girih: 'Кожаный корешок; у розетки иногда уголки.',
+  deco: 'Иногда кожаная полоса корешка.',
+  topo: 'У изолиний иногда рамка, как у карты.',
+  curves: 'Иногда рамка, как у гравюры (кроме золотого сечения).',
+};
 const VOTES = [['keep', 'Оставить'], ['fix', 'Доработать'], ['drop', 'Убрать']];
-const state = { w: 80, spine: undefined, age: undefined, off: 0, filter: 'all' };
+const state = { w: 80, age: undefined, off: 0, filter: 'all' };
 const ratings = new Map(); // id → {vote, note}
 let db = null;
 
@@ -129,7 +146,6 @@ $('#facts').innerHTML = `<span><b>${PP.STYLES.length}</b> стилей</span><sp
 // ---------- Обложки ----------
 function opts(extra) {
   const o = { ...extra };
-  if (state.spine !== undefined) o.spine = state.spine;
   if (state.age !== undefined) o.age = state.age;
   return o;
 }
@@ -157,7 +173,7 @@ function voteHtml(id) {
 function build() {
   let html = '';
   for (const s of PP.STYLES) {
-    html += `<section class="style" id="s-${s.id}"><aside><h2>${esc(s.name)}</h2><div class="sub">${s.id} · ${s.variants.length} вар.</div>${voteHtml(s.id)}<textarea id="n-${s.id}" data-id="${s.id}" rows="2" placeholder="О стиле в целом"></textarea></aside><div class="vars">`;
+    html += `<section class="style" id="s-${s.id}"><aside><h2>${esc(s.name)}</h2><div class="sub">${s.id} · ${s.variants.length} вар.</div>${WHAT[s.id] ? `<p class="what">${WHAT[s.id]}</p>` : ''}${voteHtml(s.id)}<textarea id="n-${s.id}" data-id="${s.id}" rows="2" placeholder="О стиле в целом"></textarea></aside><div class="vars">`;
     s.variants.forEach((name, v) => {
       const id = `${s.id}--${v}`;
       html += `<div class="var" data-style="${s.id}" data-v="${v}" data-id="${id}"><div class="vhead"><h3>${esc(name)}</h3>${voteHtml(id)}</div><div class="covers"></div><textarea id="n-${id}" data-id="${id}" rows="1" placeholder="Комментарий к варианту"></textarea></div>`;
@@ -279,7 +295,6 @@ function seg(id, key, attr, parse) {
   });
 }
 seg('#size', 'w', 'w', Number);
-seg('#spine', 'spine', 's', (x) => (x === '' ? undefined : +x));
 seg('#age', 'age', 'a', (x) => (x === '' ? undefined : +x));
 seg('#filter', 'filter', 'f', String);
 $('#shuffle').addEventListener('click', () => { state.off++; rerender(); });

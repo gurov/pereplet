@@ -1,8 +1,9 @@
 // Эпохи и страны — абстрактно, как обложки серий: ар-деко, модерн, античность, манускрипт,
 // Восток, звёздная геометрия, машинопись, ретрофантастика.
-import { H, W, byLum, dark, light, n, wada, on, pal, pick, poly, rand, int, smooth, shuffle, type Pt } from '../core.ts';
+import { H, W, byLum, gcd, dark, light, mix, n, wada, on, pal, pick, poly, rand, int, smooth, shuffle, type Pt } from '../core.ts';
 import { F, caps, fit, measure, txt } from '../text.ts';
-import { GOLD, bg, circle, clip, frame, initial, path, pattern, rect, stroke, texts, type Style } from '../cover.ts';
+import { bg, circle, clip, frame, GOLD, initial, path, pattern, rect, sk, stroke, texts, type Style } from '../cover.ts';
+import { blade } from './botany.ts';
 
 // ============ Ар-деко ============
 
@@ -12,7 +13,8 @@ const DECO_LINE = pal('d4b06a d4b06a c8c8c0 efe2c4 5fa48a e08a6a');
 export const deco: Style = {
   id: 'deco',
   name: 'Ар-деко',
-  variants: ['Веер', 'Лучи', 'Ступени', 'Арки'],
+  variants: ['Веер', 'Лучи', 'Ступени'],
+  sp: 0.3,
   draw(c) {
     const { r, v, L, R, cx, cw } = c;
     const b = pick(r, DECO_BG);
@@ -22,49 +24,45 @@ export const deco: Style = {
     let art = '';
     let tb = { x: L + 6, y: 26, w: cw - 12, h: 96 };
     if (v === 0) {
-      // Веер из центра снизу: лучи и дуги.
+      // Веер снизу — из середины или из угла, разного размера; до текста не дорастает.
       const k = int(r, 7, 11);
+      const m = rand(r, 0.6, 1.1);
+      const fx = pick(r, [cx, cx, 10, W - 10]);
       for (let i = 0; i <= k; i++) {
         const a = Math.PI + (i / k) * Math.PI;
-        art += stroke(`M${n(cx)} ${H}L${n(cx + 150 * Math.cos(a))} ${n(H + 150 * Math.sin(a))}`, f, 1.4);
+        art += stroke(`M${n(fx)} ${H}L${n(fx + 150 * m * Math.cos(a))} ${n(H + 150 * m * Math.sin(a))}`, f, 1.4);
       }
-      for (const rr of [44, 80, 116, 146]) art += path(`M${n(cx - rr)} ${H}a${rr} ${rr} 0 0 1 ${2 * rr} 0`, 'none', ` stroke="${f}" stroke-width="${rr === 50 ? 3 : 1.4}"`);
-      art += path(`M${n(cx - 30)} ${H}a30 30 0 0 1 60 0Z`, f);
+      for (const q of [44, 80, 116, 146]) art += path(`M${n(fx - q * m)} ${H}a${n(q * m)} ${n(q * m)} 0 0 1 ${n(2 * q * m)} 0`, 'none', sk(f, 1.4));
+      art += path(`M${n(fx - 30 * m)} ${H}a${n(30 * m)} ${n(30 * m)} 0 0 1 ${n(60 * m)} 0Z`, f);
     } else if (v === 1) {
-      // Солнце: лучи-клинья вокруг круга, название под ним.
-      const cy = rand(r, 100, 120);
-      const k = 24;
+      // Солнце: лучи-клинья вокруг круга разного размера, сдвинутого вбок; название под ним.
+      const sr = rand(r, 18, 52);
+      const cy = rand(r, 40, 140 - sr);
+      const sx = cx + rand(r, -70, 70);
+      const k = 2 * int(r, 8, 14);
       let d = '';
       for (let i = 0; i < k; i += 2) {
         const a0 = (i / k) * 2 * Math.PI;
         const a1 = ((i + 1) / k) * 2 * Math.PI;
-        d += `M${n(cx)} ${n(cy)}L${n(cx + 260 * Math.cos(a0))} ${n(cy + 260 * Math.sin(a0))}L${n(cx + 260 * Math.cos(a1))} ${n(cy + 260 * Math.sin(a1))}Z`;
+        d += `M${n(sx)} ${n(cy)}L${n(sx + 360 * Math.cos(a0))} ${n(cy + 360 * Math.sin(a0))}L${n(sx + 360 * Math.cos(a1))} ${n(cy + 360 * Math.sin(a1))}Z`;
       }
-      art = path(d, light(b, 0.08)) + circle(cx, cy, 40, b) + circle(cx, cy, 40, 'none', ` stroke="${f}" stroke-width="2"`) + circle(cx, cy, 32, 'none', ` stroke="${f}" stroke-width=".9"`) + circle(cx, cy, 6, f);
-      const py = cy + 58;
+      art = path(d, light(b, 0.08)) + circle(sx, cy, sr, b) + circle(sx, cy, sr, 'none', sk(f, 2)) + circle(sx, cy, sr * 0.8, 'none', sk(f, 0.9)) + circle(sx, cy, sr * 0.15, f);
+      const py = cy + sr + 18;
       art += rect(L - 2, py, cw + 4, H - py - 18, b) + frame(L - 2, py, cw + 4, H - py - 18, f, 1.4);
       tb = { x: L + 8, y: py + 12, w: cw - 16, h: H - py - 42 };
-    } else if (v === 2) {
+    } else {
       // Ступени: зиккурат из рамок вокруг названия.
       for (let i = 0; i < 3; i++) {
         const k = i * 8;
-        art += path(`M${n(L - 4 + k)} ${n(H - 20)}V${n(80 + k)}h${n(18)}v-${n(14)}h${n(cw + 8 - 2 * k - 36)}v${n(14)}h${n(18)}V${n(H - 20)}`, 'none', ` stroke="${f}" stroke-width="${i ? 1 : 2}"`);
+        art += path(`M${n(L - 4 + k)} ${n(H - 20)}V${n(80 + k)}h${n(18)}v-${n(14)}h${n(cw + 8 - 2 * k - 36)}v${n(14)}h${n(18)}V${n(H - 20)}`, 'none', sk(f, i ? 1 : 2));
       }
       art += stroke(`M${n(cx)} 20V58M${n(cx - 10)} 30V58M${n(cx + 10)} 30V58`, f, 1.4);
       tb = { x: L + 26, y: 110, w: cw - 52, h: 150 };
-    } else {
-      // Арки: вложенные арки дверного проёма.
-      for (let i = 0; i < 5; i++) {
-        const w = cw - i * 18;
-        const top = 70 + i * 16;
-        art += path(`M${n(cx - w / 2)} ${H}V${n(top + w / 2)}a${n(w / 2)} ${n(w / 2)} 0 0 1 ${n(w)} 0V${H}`, 'none', ` stroke="${i % 2 ? light(f, 0.3) : f}" stroke-width="${i ? 1.2 : 2.4}"`);
-      }
-      tb = { x: L + 30, y: 150, w: cw - 60, h: 120 };
     }
     return {
       svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 4, color: light(f, 0.25), af, as: 8.5, ac: f, gap: 12 }) + stroke(`M${n(L - 4)} 12H${n(R + 4)}`, f, 1),
       tex: 'grain',
-      spine: r() < 0.5 ? 'leather' : 'tone',
+      spine: 'leather',
       sc: dark(b, 0.3),
       age: 0.4,
       base: b,
@@ -81,51 +79,42 @@ const NOUV_ACC = pal('b5764a 8a9a5b c49a3c 9b5d6b 6a8a8a');
 export const nouveau: Style = {
   id: 'nouveau',
   name: 'Модерн',
-  variants: ['Арка', 'Стебли', 'Рама'],
+  variants: ['Стебли', 'Рама'],
+  sp: 0.35,
   draw(c) {
-    const { r, v, L, cx, cw, id } = c;
+    const { r, v, L, cw, id } = c;
     const b = pick(r, NOUV_BG);
     const ink = pick(r, NOUV_INK);
     const acc = pick(r, NOUV_ACC);
     const font = pick(r, [caps(F.antique, 0.1), F.slav, F.old]);
-    // Стебель: вертикальная волна с бутоном наверху.
-    const stem = (x: number, y0: number, y1: number, amp: number, ph: number) => {
-      const p: Pt[] = [];
-      for (let y = y1; y >= y0; y -= 20) p.push([x + amp * Math.sin(y * 0.045 + ph), y]);
-      const [tx, ty] = p[p.length - 1];
-      return stroke(smooth(p, false), ink, 1.8) + circle(tx, ty - 5, 6, acc) + circle(tx, ty - 5, 6, 'none', ` stroke="${ink}" stroke-width="1.2"`);
-    };
-    let art = '';
-    let tb = { x: L + 4, y: 212, w: cw - 8, h: 72 };
+    const af = caps(F.antique, 0.16);
     if (v === 0) {
-      // Арка: окно с полукруглым верхом, в нём стебли.
-      const w = cw - 4;
-      const x0 = cx - w / 2;
-      const top = 22;
-      const bot = 196;
-      const arch = `M${n(x0)} ${bot}V${n(top + w / 2)}a${n(w / 2)} ${n(w / 2)} 0 0 1 ${n(w)} 0V${bot}Z`;
-      let stems = '';
-      const k = int(r, 3, 5);
-      for (let i = 0; i < k; i++) stems += stem(x0 + ((i + 0.5) / k) * w, rand(r, top + 30, top + 80), bot, rand(r, 4, 10), rand(r, 0, 6));
-      art = path(arch, light(b, 0.3)) + clip(id + 'a', arch, stems) + path(arch, 'none', ` stroke="${ink}" stroke-width="2.4"`) + path(arch, 'none', ` stroke="${ink}" stroke-width=".8" transform="translate(${n(cx)} ${n((top + bot) / 2)}) scale(.92) translate(${n(-cx)} ${n(-(top + bot) / 2)})"`);
-    } else if (v === 1) {
-      // Стебли поперёк всей обложки, название в картуше.
-      for (let i = 0; i < 6; i++) art += stem(rand(r, 0, W), rand(r, 10, 120), H + 10, rand(r, 8, 20), rand(r, 0, 6));
+      // Стебли поперёк всей обложки, с бутонами и листьями; название в картуше.
+      let art = '';
+      for (let i = 0; i < 6; i++) {
+        const x = rand(r, 0, W);
+        const y0 = rand(r, 10, 120);
+        const amp = rand(r, 8, 20);
+        const ph = rand(r, 0, 6);
+        const p: Pt[] = [];
+        for (let y = H + 10; y >= y0; y -= 20) p.push([x + amp * Math.sin(y * 0.045 + ph), y]);
+        const [tx, ty] = p[p.length - 1];
+        const [lx, ly] = p[2];
+        art += stroke(smooth(p, false), ink, 1.8) + path(blade(lx, ly, 26, 6, r() < 0.5 ? -0.5 : -2.6), mix(acc, b, 0.35)) + circle(tx, ty - 5, 6, acc) + circle(tx, ty - 5, 6, 'none', sk(ink, 1.2));
+      }
       const py = rand(r, 140, 170);
-      art += path(`M${n(L)} ${n(py)}h${n(cw)}a14 14 0 0 1 0 28v${n(52)}a14 14 0 0 1 0 28h${n(-cw)}a14 14 0 0 1 0-28v-52a14 14 0 0 1 0-28z`, light(b, 0.4), ` stroke="${ink}" stroke-width="1.6"`);
-      tb = { x: L + 8, y: py + 12, w: cw - 16, h: 84 };
-    } else {
-      // Рама: кайма из дуг по краям.
-      const k = 14;
-      art =
-        pattern(id + 'f', k, k, `<path d="M0 ${k}a${k / 2} ${k / 2} 0 0 1 ${k} 0" fill="none" stroke="${ink}" stroke-width="1.6"/><circle cx="${k / 2}" cy="${k * 0.7}" r="2" fill="${acc}"/>`) +
-        rect(L - 8, 14, cw + 16, H - 28, `url(#${id}f)`) +
-        rect(L + 6, 28, cw - 12, H - 56, b) +
-        frame(L + 6, 28, cw - 12, H - 56, ink, 1.6);
-      tb = { x: L + 18, y: 50, w: cw - 36, h: 200 };
-      return { svg: bg(b) + art + texts(c, tb, { font, max: 22, color: ink, af: caps(F.antique, 0.16), ac: dark(acc, 0.2), at: 'split' }), tex: 'grain', spine: 'cloth', sc: dark(b, 0.45), age: 0.8, base: b };
+      art += path(`M${n(L)} ${n(py)}h${n(cw)}a14 14 0 0 1 0 28v${n(52)}a14 14 0 0 1 0 28h${n(-cw)}a14 14 0 0 1 0-28v-52a14 14 0 0 1 0-28z`, light(b, 0.4), sk(ink, 1.6));
+      return { svg: bg(b) + art + texts(c, { x: L + 8, y: py + 12, w: cw - 16, h: 84 }, { font, max: 20, lines: 3, color: ink, af, ac: dark(acc, 0.2) }), tex: 'grain', sc: dark(b, 0.45), corners: r() < 0.3, age: 0.8, base: b };
     }
-    return { svg: bg(b) + art + texts(c, tb, { font, max: 20, lines: 3, color: ink, af: caps(F.antique, 0.16), ac: dark(acc, 0.2) }), tex: 'grain', spine: 'cloth', sc: dark(b, 0.45), age: 0.8, base: b };
+    // Рама: кайма из листьев с ягодой, мелкая или крупная.
+    const k = pick(r, [12, 16, 22]);
+    const art =
+      pattern(id + 'f', k, k, path(blade(k * 0.15, k * 0.85, k * 0.8, k * 0.2, -0.8), ink) + circle(k * 0.78, k * 0.72, k * 0.1, acc)) +
+      rect(L - 8, 14, cw + 16, H - 28, `url(#${id}f)`) +
+      rect(L + 6, 28, cw - 12, H - 56, b) +
+      frame(L + 6, 28, cw - 12, H - 56, ink, 1.6);
+    // Уголков нет: они срезали бы кайму.
+    return { svg: bg(b) + art + texts(c, { x: L + 18, y: 50, w: cw - 36, h: 200 }, { font, max: 22, color: ink, af, ac: dark(acc, 0.2), at: 'split' }), tex: 'grain', sc: dark(b, 0.45), age: 0.8, base: b };
   },
 };
 
@@ -146,18 +135,19 @@ export const antique: Style = {
     const b = black ? '#1f1a17' : pick(r, ['#ecdcc0', '#e8d5b5', '#efe4cf']);
     const f = black ? terra : '#2a211c';
     const font = caps(F.antique, 0.12);
-    const k = 22;
-    const band = (y: number, col: string) => pattern(id + 'm' + y, k, k, meander(k, col, 2.6), ` y="${y}"`) + rect(0, y, W, k, `url(#${id}m${y})`);
+    // Меандр мелкий или крупный.
+    const k = pick(r, [16, 22, 30]);
+    const band = (y: number, col: string) => pattern(id + 'm' + y, k, k, meander(k, col, k * 0.12), ` y="${y}"`) + rect(0, y, W, k, `url(#${id}m${y})`);
     let art = '';
     let tb = { x: L, y: 70, w: cw, h: 160 };
     if (v === 0) {
-      art = band(22, f) + band(H - 44, f) + stroke(`M0 16H${W}M0 50H${W}M0 ${H - 50}H${W}M0 ${H - 16}H${W}`, f, 1.6);
+      art = band(22, f) + band(H - 22 - k, f) + stroke(`M0 16H${W}M0 ${k + 28}H${W}M0 ${H - k - 28}H${W}M0 ${H - 16}H${W}`, f, 1.6);
     } else if (v === 1) {
       // Медальон: круг с точками, буква в середине.
       const cy = 96;
       let dots = '';
       for (let i = 0; i < 28; i++) dots += circle(cx + 54 * Math.cos((i / 28) * 6.283), cy + 54 * Math.sin((i / 28) * 6.283), 2, f);
-      art = circle(cx, cy, 62, 'none', ` stroke="${f}" stroke-width="2"`) + dots + circle(cx, cy, 46, 'none', ` stroke="${f}" stroke-width="1"`) + txt(fit(initial(c.title), F.antique, { maxW: 60, max: 54 }), cx, cy + 19, f, 'middle') + band(H - 40, f);
+      art = circle(cx, cy, 62, 'none', sk(f, 2)) + dots + circle(cx, cy, 46, 'none', sk(f, 1)) + txt(fit(initial(c.title), F.antique, { maxW: 60, max: 54 }), cx, cy + 19, f, 'middle') + band(H - 12 - k, f);
       tb = { x: L, y: 170, w: cw, h: 84 };
     } else {
       // Фриз: полосы с треугольниками и волнами, как на вазе.
@@ -173,7 +163,7 @@ export const antique: Style = {
         rect(0, 268, W, 6, f);
       tb = { x: L, y: 76, w: cw, h: 150 };
     }
-    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, color: f, af: caps(F.antique, 0.2), as: 9, gap: 14 }), tex: 'grain', spine: 'tone', age: 0.8, base: b };
+    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, color: f, af: caps(F.antique, 0.2), as: 9, gap: 14 }), tex: 'grain', age: 0.8, base: b };
   },
 };
 
@@ -186,6 +176,7 @@ export const manuscript: Style = {
   id: 'manuscript',
   name: 'Манускрипт',
   variants: ['Кайма', 'Плетёнка'],
+  sp: 0.5,
   draw(c) {
     const { r, v, L, R, cw, id } = c;
     const b = pick(r, PARCH);
@@ -224,8 +215,9 @@ export const manuscript: Style = {
       }
       art = stroke(smooth(a, false), k, 6.5) + stroke(smooth(a, false), c1, 4) + stroke(smooth(bb, false), k, 6.5) + stroke(smooth(bb, false), c2, 4);
       tb = { x: L + 28, y: 40, w: cw - 30, h: 220 };
-      return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 5, color: k, af, ac: c1, as: 9, align: 'start', at: 'split' }), tex: 'grain', spine: 'leather', sc: '#4a2a1a', age: 1, base: b };
+      return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 5, color: k, af, ac: c1, as: 9, align: 'start', at: 'split' }), tex: 'grain', spine: 'leather', sc: '#4a2a1a', corners: r() < 0.4, age: 1, base: b };
     }
+    // У каймы уголков нет: они закрыли бы золотые квадраты.
     return { svg: bg(b) + art + texts(c, tb, { font, max: 22, color: k, af, ac: c1, as: 9 }), tex: 'grain', spine: 'leather', sc: pick(r, ['#4a2a1a', '#2c2018', '#5a1f1f']), age: 1, base: b };
   },
 };
@@ -239,8 +231,9 @@ export const east: Style = {
   id: 'east',
   name: 'Восток',
   variants: ['Солнце', 'Волны', 'Решётка', 'Облака'],
+  sp: 0.25,
   draw(c) {
-    const { r, v, L, R, cx, cw, id } = c;
+    const { r, v, L, R, cw, id } = c;
     const b = pick(r, EAST_BG);
     const darkBg = on(b) !== '#1d1b19';
     const ink = darkBg ? '#ece4d2' : '#26365a';
@@ -250,24 +243,30 @@ export const east: Style = {
     let tb = { x: L, y: 20, w: cw, h: 90 };
     let at: 'top' | 'bottom' = 'top';
     if (v === 0) {
-      const cy = rand(r, 150, 180);
-      art = circle(cx + rand(r, -20, 20), cy, rand(r, 46, 60), acc);
+      // Солнце любого размера, сдвинуто, иногда уходит за край; всегда в стороне от текста.
+      const low = r() < 0.5;
+      const sr = rand(r, 24, 95);
+      const cy = low ? rand(r, 200 - sr - 70, 200 - sr) : rand(r, 120 + sr, 190 + sr);
+      const sx = rand(r, L - sr * 0.4, R + sr * 0.4);
+      art = circle(sx, cy, sr, acc);
       for (let i = 0; i < 4; i++) {
-        const y = cy - 30 + i * 26 + rand(r, -6, 6);
-        const x = rand(r, -40, 80);
-        const w = rand(r, 90, 150);
-        art += rect(x, y, w, 12, ink, ` rx="6" opacity="${darkBg ? 0.85 : 0.9}"`);
+        const y = cy - sr * 0.6 + i * sr * 0.5 + rand(r, -6, 6);
+        if (low ? y > 196 : y < 116) continue;
+        art += rect(sx - rand(r, 60, 140), y, rand(r, 90, 150), 12, ink, ` rx="6" opacity="${darkBg ? 0.85 : 0.9}"`);
+      }
+      if (low) {
+        tb = { x: L, y: 220, w: cw, h: 64 };
+        at = 'bottom';
       }
     } else if (v === 1) {
-      // Волны-чешуйки в нижней половине.
-      // Сейгайха: веера из колец, каждый ряд ложится на предыдущий.
-      const s = 15;
+      // Сейгайха: веера из колец, каждый ряд ложится на предыдущий; мелкая или крупная.
+      const s = pick(r, [10, 15, 22, 30]);
       const fan = (x: number, y: number) => [1, 0.75, 0.5, 0.25].map((m, i) => `<circle cx="${n(x)}" cy="${n(y)}" r="${n(s * m)}" fill="${i % 2 ? b : ink}"/>`).join('');
       const y0 = rand(r, 150, 190);
       art =
-        pattern(id + 'w', 2 * s, s, fan(0, s / 2) + fan(2 * s, s / 2) + fan(s, s) + fan(0, 1.5 * s) + fan(2 * s, 1.5 * s), ` y="${n(y0)}"`) +
+        pattern(id + 'w', 2 * s, s, fan(0, s / 2) + fan(2 * s, s / 2) + fan(s, s) + fan(0, 1.5 * s) + fan(2 * s, 1.5 * s), ` x="${n(rand(r, 0, s))}" y="${n(y0)}"`) +
         rect(0, y0, W, H - y0, `url(#${id}w)`) +
-        circle(R - 26, rand(r, 120, y0 - 26), 14, acc);
+        circle(R - 26, rand(r, 128, y0 - 20), rand(r, 8, 16), acc);
     } else if (v === 2) {
       // Решётка из тонких реек, одна клетка цветная.
       const xs = [L - 6, L + cw * 0.38, L + cw * 0.62, R + 4];
@@ -284,18 +283,10 @@ export const east: Style = {
         art += rect(x, y, rand(r, 80, 140), 16, i % 2 ? acc : ink, ` rx="8" opacity="${i % 2 ? 0.9 : 0.25}"`);
       }
       let d = '';
-      for (let i = 0; i < 9; i++) {
-        const x = rand(r, L, R);
-        const y = rand(r, 120, 260);
-        d += `M${n(x)} ${n(y)}l-12 26`;
-      }
+      for (let i = 0; i < 9; i++) d += `M${n(rand(r, L, R))} ${n(rand(r, 120, 260))}l-12 26`;
       art += stroke(d, ink, 1.2);
     }
-    if (v === 0 && r() < 0.5) {
-      tb = { x: L, y: 220, w: cw, h: 64 };
-      at = 'bottom';
-    }
-    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 3, color: ink, align: 'start', at, ac: darkBg ? acc : dark(acc, 0.1), gap: 7 }), tex: 'grain', spine: 'cloth', sc: darkBg ? dark(b, 0.4) : '#26365a', age: 0.5, base: b };
+    return { svg: bg(b) + art + texts(c, tb, { font, max: 22, lines: 3, color: ink, align: 'start', at, ac: darkBg ? acc : dark(acc, 0.1), gap: 7 }), tex: 'grain', sc: darkBg ? dark(b, 0.4) : '#26365a', age: 0.5, base: b };
   },
 };
 
@@ -318,12 +309,12 @@ function star(cx: number, cy: number, R: number, nn: number, k: number, rot = 0)
   }
   return d;
 }
-const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
 
 export const girih: Style = {
   id: 'girih',
   name: 'Звёзды',
-  variants: ['Розетка', 'Плитка', 'Арка'],
+  variants: ['Розетка', 'Плитка'],
+  sp: 0.3,
   draw(c) {
     const { r, v, L, cx, cw, id } = c;
     // Сочетание Вады по светлоте: тёмный фон, второй тёмный, краска узора, светлая линия.
@@ -332,43 +323,29 @@ export const girih: Style = {
     const font = pick(r, [caps(F.antique, 0.1), F.serif, F.old]);
     let art = '';
     let tb = { x: L, y: 200, w: cw, h: 80 };
-    let b = d0;
-    let ink = p0;
     if (v === 0) {
-      const cy = 104;
+      // Розетка разного размера; крупная уходит за край, но до текста не дотягивается.
+      const m = rand(r, 0.6, 1.6);
+      const cy = 192 - 82 * m;
+      const sx = cx + rand(r, -50, 50) * m;
       const nn = pick(r, [8, 10, 12, 16]);
       const k = nn === 8 ? 3 : nn === 10 ? 3 : nn === 12 ? 5 : 7;
       art =
-        circle(cx, cy, 80, d1) +
-        path(star(cx, cy, 76, nn, k, -Math.PI / 2), 'none', ` stroke="${p0}" stroke-width="3" stroke-linejoin="round"`) +
-        path(star(cx, cy, 40, nn, k - 1 || 2, -Math.PI / 2 + Math.PI / nn), a0, ` stroke="${d0}" stroke-width="2" fill-rule="evenodd"`) +
-        circle(cx, cy, 8, d0) +
-        circle(cx, cy, 80, 'none', ` stroke="${a0}" stroke-width="2"`);
-    } else if (v === 1) {
-      // Плитка: восьмиконечные звёзды в узлах решётки.
-      const s = pick(r, [40, 50]);
-      const body = path(star(s / 2, s / 2, s * 0.42, 8, 3), d1, ` stroke="${p0}" stroke-width="2" stroke-linejoin="round" fill-rule="nonzero"`) + circle(s / 2, s / 2, s * 0.12, a0) + path(star(0, 0, s * 0.42, 8, 3) + star(s, 0, s * 0.42, 8, 3) + star(0, s, s * 0.42, 8, 3) + star(s, s, s * 0.42, 8, 3), 'none', ` stroke="${p0}" stroke-width="2"`);
-      art = pattern(id + 'p', s, s, body, ` x="${n(cx - s / 2)}"`) + rect(0, 0, W, H, `url(#${id}p)`) + rect(L - 6, 196, cw + 12, 84, d0) + frame(L - 2, 200, cw + 4, 76, a0, 1.6);
-      tb = { x: L + 6, y: 208, w: cw - 12, h: 62 };
+        circle(sx, cy, 80 * m, d1) +
+        path(star(sx, cy, 76 * m, nn, k, -Math.PI / 2), 'none', sk(p0, 3 * m) + ` stroke-linejoin="round"`) +
+        path(star(sx, cy, 40 * m, nn, k - 1 || 2, -Math.PI / 2 + Math.PI / nn), a0, sk(d0, 2 * m) + ` fill-rule="evenodd"`) +
+        circle(sx, cy, 8 * m, d0) +
+        circle(sx, cy, 80 * m, 'none', sk(a0, 2));
     } else {
-      // Стрельчатая арка, внутри — узор.
-      const s = 30;
-      const w = cw - 4;
-      const x0 = cx - w / 2;
-      const top = 24;
-      const bot = 200;
-      const arch = `M${n(x0)} ${bot}V${n(top + w * 0.55)}Q${n(x0)} ${top + 10} ${n(cx)} ${top}Q${n(x0 + w)} ${top + 10} ${n(x0 + w)} ${n(top + w * 0.55)}V${bot}Z`;
-      b = p0;
-      ink = d0;
-      art =
-        pattern(id + 'p', s, s, path(star(s / 2, s / 2, s * 0.45, 8, 3), a0, ` stroke="${d0}" stroke-width="1.6"`), ` x="${n(cx - s / 2)}"`) +
-        path(arch, d1) +
-        path(arch, `url(#${id}p)`) +
-        path(arch, 'none', ` stroke="${d0}" stroke-width="5"`) +
-        path(arch, 'none', ` stroke="${a0}" stroke-width="1.6"`);
-      tb = { x: L, y: 212, w: cw, h: 72 };
+      // Плитка: восьмиконечные звёзды в узлах решётки, от мелкой до крупной.
+      const s = pick(r, [30, 40, 54, 72, 96]);
+      const sw = sk(p0, Math.max(1.4, s * 0.045));
+      const body = path(star(s / 2, s / 2, s * 0.42, 8, 3), d1, sw + ' stroke-linejoin="round" fill-rule="nonzero"') + circle(s / 2, s / 2, s * 0.12, a0) + path(star(0, 0, s * 0.42, 8, 3) + star(s, 0, s * 0.42, 8, 3) + star(0, s, s * 0.42, 8, 3) + star(s, s, s * 0.42, 8, 3), 'none', sw);
+      art = pattern(id + 'p', s, s, body, ` x="${n(cx - s / 2 + rand(r, -s / 2, s / 2))}" y="${n(rand(r, 0, s))}"`) + rect(0, 0, W, H, `url(#${id}p)`) + rect(L - 6, 196, cw + 12, 84, d0) + frame(L - 2, 200, cw + 4, 76, a0, 1.6);
+      tb = { x: L + 6, y: 208, w: cw - 12, h: 62 };
     }
-    return { svg: bg(b) + art + texts(c, tb, { font, max: 20, lines: 3, color: ink, ac: a0, af: caps(F.antique, 0.16), as: 9 }), tex: 'grain', spine: 'leather', sc: dark(d0, 0.35), age: 0.5, base: b };
+    // Уголки только у розетки: у плитки они срезали бы плашку.
+    return { svg: bg(d0) + art + texts(c, tb, { font, max: 20, lines: 3, color: p0, ac: a0, af: caps(F.antique, 0.16), as: 9 }), tex: 'grain', spine: 'leather', sc: dark(d0, 0.35), corners: v === 0 && r() < 0.3, age: 0.5, base: d0 };
   },
 };
 
@@ -441,7 +418,6 @@ export const typewriter: Style = {
     return {
       svg: bg(b) + art + texts(c, tb, { font: caps(font, 0), max: 19, min: 8, lines: 5, lh: 1.25, color: ink, af: font, as: 9, ac: red, authorFirst: v < 2, gap: 14 }),
       tex: term ? 'none' : 'grain',
-      spine: term ? 'tone' : 'none',
       age: term ? 0 : 0.9,
       base: b,
     };
@@ -469,36 +445,35 @@ export const space: Style = {
       `<linearGradient id="${id}s" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset=".6" stop-color="${sky[1]}"/><stop offset="1" stop-color="${sky[2]}"/></linearGradient>` +
       bg(`url(#${id}s)`) +
       stroke(stars, '#fff', 1.6, ' stroke-linecap="round" opacity=".8"');
-    const ty = 22;
     if (v === 0) {
-      // Затмение: тёмный диск, корона, лучи.
-      const ex = cx;
-      const ey = rand(r, 150, 175);
+      // Затмение: маленькое или огромное, сдвинутое; крупное уходит за нижний край. Текст наверху свободен.
+      const m = rand(r, 0.45, 1.7);
+      const ex = cx + rand(r, -60, 60);
+      const ey = rand(r, 125 + 70 * m, 150 + 70 * m);
       let rays = '';
       for (let i = 0; i < 36; i++) {
         const a = (i / 36) * 6.283;
-        const l = i % 2 ? 66 : 80;
-        rays += `M${n(ex + 52 * Math.cos(a))} ${n(ey + 52 * Math.sin(a))}L${n(ex + l * Math.cos(a))} ${n(ey + l * Math.sin(a))}`;
+        const l = (i % 2 ? 66 : 80) * m;
+        rays += `M${n(ex + 52 * m * Math.cos(a))} ${n(ey + 52 * m * Math.sin(a))}L${n(ex + l * Math.cos(a))} ${n(ey + l * Math.sin(a))}`;
       }
-      art += `<radialGradient id="${id}c"><stop offset=".5" stop-color="${p1}"/><stop offset="1" stop-color="${p1}" stop-opacity="0"/></radialGradient>` + circle(ex, ey, 70, `url(#${id}c)`) + stroke(rays, p1, 1.4) + circle(ex, ey, 46, sky[0]);
+      art += `<radialGradient id="${id}c"><stop offset=".5" stop-color="${p1}"/><stop offset="1" stop-color="${p1}" stop-opacity="0"/></radialGradient>` + circle(ex, ey, 70 * m, `url(#${id}c)`) + stroke(rays, p1, 1.4) + circle(ex, ey, 46 * m, sky[0]);
     } else {
-      // Горизонт: полосатое солнце над сеткой в перспективе.
+      // Горизонт: полосатое солнце разного размера над сеткой в перспективе.
       const hz = rand(r, 176, 196);
-      const sr = rand(r, 48, 60);
+      const sr = rand(r, 26, hz - 120);
+      const sx = cx + rand(r, -60, 60);
       let gaps = '';
-      for (let i = 0; i < 5; i++) gaps += rect(cx - sr, hz - 4 - i * 9, sr * 2, 2 + i * 0.6, sky[1]);
+      for (let i = 0; i < 5; i++) gaps += rect(sx - sr, hz - (4 + i * 9) * sr / 54, sr * 2, (2 + i * 0.6) * sr / 54, sky[1]);
       let grid = '';
       for (let i = -8; i <= 8; i++) grid += `M${n(cx + i * 6)} ${n(hz)}L${n(cx + i * 40)} ${H}`;
       for (let i = 1; i < 8; i++) grid += `M0 ${n(hz + (H - hz) * (i / 8) ** 1.8)}H${W}`;
-      art += clip(id + 'u', `M0 0H${W}V${n(hz)}H0Z`, circle(cx, hz, sr, p1) + gaps) + rect(0, hz, W, H - hz, sky[0]) + stroke(grid, p2, 1.2);
+      art += clip(id + 'u', `M0 0H${W}V${n(hz)}H0Z`, circle(sx, hz, sr, p1) + gaps) + rect(0, hz, W, H - hz, sky[0]) + stroke(grid, p2, 1.2);
     }
     return {
-      svg: art + frame(8, 8, W - 16, H - 16, fg, 1, ' opacity=".5"') + texts(c, { x: L, y: ty, w: cw, h: 90 }, { font, max: 24, lines: 3, color: fg, align: 'start', at: 'top', ac: p1, as: 9, gap: 8 }),
+      svg: art + frame(8, 8, W - 16, H - 16, fg, 1, ' opacity=".5"') + texts(c, { x: L, y: 22, w: cw, h: 90 }, { font, max: 24, lines: 3, color: fg, align: 'start', at: 'top', ac: p1, as: 9, gap: 8 }),
       tex: 'grain',
-      spine: 'tone',
       age: 0.25,
       base: sky[1],
     };
   },
 };
-

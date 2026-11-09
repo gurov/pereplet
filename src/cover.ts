@@ -1,15 +1,15 @@
 // Каркас обложки: контекст стиля, корешок, фактура, следы времени, раскладка текста.
 import { H, W, dark, light, mix, n, pick, rand, int, type Rng } from './core.ts';
-import { F, caps, cap, fit, height, txt, type Font } from './text.ts';
+import { F, caps, cap, fit, height, txt, type Fit, type Font } from './text.ts';
 
-// Контекст стиля. Корешок выбирается до рисунка: текст не должен заезжать на него.
+// Контекст стиля.
 export interface Ctx {
   title: string;
   author: string;
   r: Rng;
   v: number; // вариант стиля
   id: string; // приставка id внутри SVG
-  s: number; // ширина корешка (0 — только сгиб)
+  s: number; // ширина полосы корешка (0 — её нет)
   L: number; // левый край места под текст
   R: number; // правый край
   cx: number; // середина места
@@ -18,10 +18,11 @@ export interface Ctx {
 
 export interface Art {
   svg: string;
-  spine?: 'cloth' | 'leather' | 'tone' | 'none'; // материал полосы корешка
-  sc?: string; // её цвет
-  corners?: boolean; // уголки из того же материала (полукожаный переплёт)
   tex?: 'cloth' | 'leather' | 'grain' | 'none'; // фактура всей обложки
+  spine?: 'cloth' | 'leather'; // материал полосы корешка, если она выпала
+  sc?: string; // цвет полосы и уголков
+  corners?: boolean; // уголки из того же материала
+  frame?: string; // рамка по краю обложки этой краской (форму выбирает конвейер)
   age?: number; // насколько обложка может состариться, 0…1
   base?: string; // основной цвет — для потёртостей
 }
@@ -31,7 +32,7 @@ export interface Style {
   name: string;
   variants: string[];
   w?: number; // как часто выпадает
-  sp?: number; // доля обложек с полосой корешка, по умолчанию половина
+  sp?: number; // доля обложек с полосой корешка (по умолчанию её нет)
   draw: (c: Ctx) => Art;
 }
 
@@ -50,7 +51,12 @@ export const pattern = (id: string, w: number, h: number, body: string, extra = 
 export const g = (body: string, attrs: string) => `<g ${attrs}>${body}</g>`;
 // Рисунок, обрезанный по контуру d.
 export const clip = (id: string, d: string, body: string) => `<clipPath id="${id}"><path d="${d}"/></clipPath><g clip-path="url(#${id})">${body}</g>`;
+// Обводка: краска и толщина.
+export const sk = (c: string, w: number) => ` stroke="${c}" stroke-width="${n(w)}"`;
 export const op = (o: number) => ` opacity="${Math.round(o * 100) / 100}"`;
+// Градиент на всю обложку: от a к b по направлению (x2, y2).
+export const grad = (id: string, a: string, b: string, x2 = 0, y2 = 1) =>
+  `<linearGradient id="${id}" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>` + rect(0, 0, W, H, `url(#${id})`);
 
 // ---------- Текст в коробке ----------
 
@@ -75,6 +81,7 @@ export interface TextOpts {
   authorFirst?: boolean;
   gap?: number;
   mid?: (y: number, x: number) => string; // украшение между названием и автором
+  halo?: string; // обводка букв краской фона: текст читается поверх узора
 }
 export const AUTHOR = caps(F.narrow, 0.12);
 
@@ -93,8 +100,9 @@ export function texts(c: Ctx, b: Box, o: TextOpts): string {
   const th = height(t);
   const ah = height(a);
   const ac = o.ac ?? o.color;
-  const T = (y: number) => txt(t, x, y + cap(t), o.color, al);
-  const A = (y: number) => txt(a, x, y + cap(a), ac, al, ac === o.color ? ' opacity=".85"' : '');
+  const hl = (f: Fit | null) => (o.halo && f ? ` stroke="${o.halo}" stroke-width="${n(f.size * 0.22)}" stroke-linejoin="round" paint-order="stroke"` : '');
+  const T = (y: number) => txt(t, x, y + cap(t), o.color, al, hl(t));
+  const A = (y: number) => txt(a, x, y + cap(a), ac, al, hl(a) + (ac === o.color ? ' opacity=".85"' : ''));
   if (at === 'split') return T(b.y) + A(b.y + b.h - ah);
   if (at === 'splitUp') return A(b.y) + T(b.y + b.h - th);
   const first = o.authorFirst ? ah : th;
@@ -123,44 +131,55 @@ const WEAVE = '<path d="M0 .5H2.5M.5 0V2.5" stroke="#fff" stroke-opacity=".06" s
 const LEATHER =
   '<path d="M2 3c1-1 3 0 2 1s-3 0-2-1zM13 9c1-1 3 0 2 1s-3 0-2-1zM6 15c1-.5 2 .5 1 1s-2-.5-1-1zM17 2c.8-.5 1.6.4.8.9s-1.6-.4-.8-.9zM9 7c.6-.4 1.4.3.7.7s-1.4-.3-.7-.7zM19 17c.8-.5 1.6.4.8.9s-1.6-.4-.8-.9zM3 20c.6-.4 1.4.3.7.7s-1.4-.3-.7-.7z" fill="#000" opacity=".16"/><path d="M6 5h1.5M1 11h1M14 14h1.5M10 20h1" stroke="#fff" stroke-opacity=".09"/>';
 
-export function texture(id: string, kind: string, where = `width="${W}" height="${H}"`): string {
-  if (kind === 'cloth') return pattern(id + 'tw', 2.5, 2.5, WEAVE) + `<rect ${where} fill="url(#${id}tw)"/>`;
-  if (kind === 'leather')
-    return pattern(id + 'tl', 22, 22, LEATHER) + `<rect ${where} fill="url(#${id}tl)"/>`;
-  if (kind === 'grain') return pattern(id + 'tg', 15, 15, GRAIN) + `<rect ${where} fill="url(#${id}tg)" opacity=".18"/>`;
+export function texture(id: string, kind: string, w = W): string {
+  if (kind === 'cloth') return pattern(id + 'tw', 2.5, 2.5, WEAVE) + rect(0, 0, w, H, `url(#${id}tw)`);
+  if (kind === 'leather') return pattern(id + 'tl', 22, 22, LEATHER) + rect(0, 0, w, H, `url(#${id}tl)`);
+  if (kind === 'grain') return pattern(id + 'tg', 15, 15, GRAIN) + rect(0, 0, W, H, `url(#${id}tg)`, op(0.18));
   return '';
 }
 
-// ---------- Корешок: полоса другого материала и сгиб ----------
+// ---------- Сгиб у левого края и свет слева ----------
 
-// Корешок либо толстый, либо его нет: промежуточные ширины смотрятся случайно.
-export const SPINE = 34;
+export const hinge = (s: number) => rect(0, 0, 1.2, H, '#000', op(0.25)) + rect(s + 6, 0, 2.4, H, '#000', op(0.1)) + rect(s + 8.4, 0, 1.6, H, '#fff', op(0.08));
 
-export function spine(c: Ctx, art: Art): string {
-  const { s, id } = c;
-  const base = art.base ?? '#777777';
-  const kind = art.spine ?? 'tone';
-  let out = '';
-  if (s && kind !== 'none') {
-    if (kind === 'tone') out += rect(0, 0, s, H, '#000', ' opacity=".2"');
-    else {
-      const col = art.sc ?? dark(base, 0.4);
-      out += rect(0, 0, s, H, col) + texture(id + 's', kind, `width="${s}" height="${H}"`);
-      if (art.corners) {
-        const k = 26 + s * 0.5;
-        const d = `M${W} 0V${n(k)}L${n(W - k)} 0ZM${W} ${H}V${n(H - k)}L${n(W - k)} ${H}Z`;
-        out += path(d, col) + stroke(`M${n(W - k)} 0L${W} ${n(k)}M${n(W - k)} ${H}L${W} ${n(H - k)}`, dark(col, 0.4), 1.2, ' opacity=".6"');
-      }
-    }
-    out += stroke(`M${s - 0.6} 0V${H}`, '#000', 1.2, ' opacity=".35"') + stroke(`M${s + 0.6} 0V${H}`, '#fff', 1, ' opacity=".15"');
+// ---------- Оформление: наклейки, рамки, украшения углов, полоса корешка, уголки ----------
+
+// Контур наклейки формы k: 0 прямоугольник, 1 срезанные углы, 2 вогнутые, 3 скруглённые, 4 овал, 5 ярлык.
+export function lab(k: number, x: number, y: number, w: number, h: number): string {
+  const q = Math.min(10, h / 4);
+  const [X, Y, a, b, c, d, e, f] = [x + w, y + h, x + q, x + w - q, y + q, y + h - q, n(q), n(-q)];
+  if (k === 1) return `M${n(a)} ${n(y)}H${n(b)}L${n(X)} ${n(c)}V${n(d)}L${n(b)} ${n(Y)}H${n(a)}L${n(x)} ${n(d)}V${n(c)}Z`;
+  if (k === 2 || k === 3) {
+    const arc = (dx: string, dy: string) => `a${e} ${e} 0 0 ${k - 2} ${dx} ${dy}`;
+    return `M${n(a)} ${n(y)}H${n(b)}${arc(e, e)}V${n(d)}${arc(f, e)}H${n(a)}${arc(f, f)}V${n(c)}${arc(e, f)}Z`;
   }
-  // Сгиб у корешка и свет, падающий слева.
-  const hx = s ? s + 6 : 8;
-  out +=
-    `<linearGradient id="${id}h" x1="${n(hx - 4)}" x2="${n(hx + 5)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".45" stop-color="#000" stop-opacity=".22"/><stop offset=".6" stop-color="#fff" stop-opacity=".14"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>` +
-    rect(hx - 4, 0, 9, H, `url(#${id}h)`) +
-    `<linearGradient id="${id}e" x2="${s ? 1 : 0.08}" gradientUnits="objectBoundingBox"><stop offset="0" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>` +
-    rect(0, 0, Math.max(s, 12), H, `url(#${id}e)`);
+  if (k === 4) return `M${n(x)} ${n(y + h / 2)}a${n(w / 2)} ${n(h / 2)} 0 1 0 ${n(w)} 0a${n(w / 2)} ${n(h / 2)} 0 1 0 ${n(-w)} 0Z`;
+  if (k === 5) return `M${n(x)} ${n(y + h / 2)}L${n(a)} ${n(y)}H${n(b)}L${n(X)} ${n(y + h / 2)}L${n(b)} ${n(Y)}H${n(a)}Z`;
+  return `M${n(x)} ${n(y)}H${n(X)}V${n(Y)}H${n(x)}Z`;
+}
+// Рамка вида k: 0 одна линия, 1 двойная, 2 толстая с тонкой, 3 с вогнутыми углами, 4 из точек, 5 скруглённая двойная.
+export function box(k: number, x: number, y: number, w: number, h: number, col: string): string {
+  const o = (f: number, i: number, sw: number, e = '') => path(lab(f, x + i, y + i, w - 2 * i, h - 2 * i), 'none', sk(col, sw) + e);
+  return k === 0 ? o(0, 0, 1.4) : k === 1 ? o(0, 0, 1.6) + o(0, 5, 0.8) : k === 2 ? o(0, 0, 3) + o(0, 6, 0.8) : k === 3 ? o(2, 0, 1.4) + o(2, 5, 0.7) : k === 4 ? o(0, 0, 2, ' stroke-dasharray="0 4" stroke-linecap="round"') : o(3, 0, 1.4) + o(3, 5, 0.7);
+}
+// Украшения в углах рамки: 0 кольцо с точкой, 1 ромб, 2 квадрат, 3 точка, 4 ничего.
+export function orns(k: number, x: number, y: number, w: number, h: number, col: string): string {
+  let s = '';
+  for (const [px, py] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) s += k === 0 ? circle(px, py, 4.5, 'none', sk(col, 1.6)) + circle(px, py, 1.6, col) : k === 1 ? path(`M${n(px)} ${n(py - 5)}l5 5-5 5-5-5z`, col) : k === 2 ? rect(px - 3.5, py - 3.5, 7, 7, col) : k === 3 ? circle(px, py, 3, col) : '';
+  return s;
+}
+
+// Полоса корешка: материал переплёта немного заходит на крышку. Одна ширина — разные смотрятся случайно.
+export const SPINE = 12;
+const CK = 32; // катет уголка
+
+// Рамка по краю, полоса корешка и уголки — поверх рисунка стиля.
+export function dress(c: Ctx, a: Art): string {
+  const { s, r, id } = c;
+  const col = a.sc ?? dark(a.base ?? '#777777', 0.45);
+  let out = a.frame ? box(int(r, 0, 5), s + 8, 10, W - s - 18, H - 20, a.frame) : '';
+  if (s) out += rect(0, 0, s, H, col) + texture(id + 's', a.spine ?? 'cloth', s) + rect(s - 1, 0, 1, H, '#000', op(0.35)) + rect(s, 0, 1, H, '#fff', op(0.15));
+  if (a.corners) out += path(`M${W} 0V${CK}L${W - CK} 0ZM${W} ${H}V${H - CK}L${W - CK} ${H}Z`, col) + stroke(`M${W - CK} 0L${W} ${CK}M${W - CK} ${H}L${W} ${H - CK}`, dark(col, 0.4), 1.2, op(0.6));
   return out;
 }
 

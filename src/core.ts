@@ -42,6 +42,8 @@ export function shuffle<T>(r: Rng, list: readonly T[]): T[] {
   return a;
 }
 
+export const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+
 // Число для SVG: одна цифра после точки, без хвостовых нулей.
 export const n = (x: number) => String(Math.round(x * 10) / 10);
 export const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -114,6 +116,15 @@ export function wadaColor(r: Rng, lo = 0, hi = 1): string {
 }
 // От тёмного к светлому.
 export const byLum = (cs: string[]) => [...cs].sort((a, b) => lum(a) - lum(b));
+// Плавная растяжка: k красок от a к b.
+export const ramp = (a: string, b: string, k: number) => Array.from({ length: k }, (_, i) => mix(a, b, i / (k - 1 || 1)));
+// Близкие оттенки: краска Вады от тёмной к светлой, иногда с уходом в соседнюю краску сочетания.
+export function shades(r: Rng, k: number, lo = 0.45, hi = 0.5): string[] {
+  const [a, b] = wada(r, 2);
+  return ramp(dark(a, lo), light(mix(a, b, rand(r, 0, 0.6)), hi), k);
+}
+// Палитра от тёмной краски к светлой: контрастное сочетание Вады или близкие оттенки.
+export const palette = (r: Rng, k: 2 | 3 | 4, p = 0.5) => (r() < p ? shades(r, k) : byLum(wada(r, k)));
 // Краски, заметные на фоне; не хватает — добавляется тёмная или светлая.
 export const seen = (cs: string[], bg: string, k = 3) => [...cs.filter((x) => Math.abs(lum(x) - lum(bg)) > 0.12), on(bg), on(bg), on(bg)].slice(0, k);
 

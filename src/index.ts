@@ -3,12 +3,12 @@
 // - Стиль зависит только от автора: книги одного автора выглядят как одна серия.
 //   Фамилия — последнее слово автора не короче трёх букв: «Булгаков», «М. А. Булгаков»
 //   и «Михаил Булгаков» — одно и то же. Без автора стиль решает название.
-// - Вариант стиля, краски, шрифт, толщина корешка и потёртости — от названия и фамилии.
+// - Вариант стиля, краски, шрифт, оформление переплёта и потёртости — от названия и фамилии.
 // - Текст раскладывается по таблицам ширин знаков, поэтому результат одинаков везде.
 //   Шрифты — fonts/fonts.css; список нужных обложке — в `fonts` (дождаться document.fonts.load).
 import { H, W, hash, rng, weighted } from './core.ts';
 import { used } from './text.ts';
-import { SPINE, spine, texture, wear, type Ctx, type Style } from './cover.ts';
+import { SPINE, dress, hinge, texture, wear, type Ctx, type Style } from './cover.ts';
 import { STYLES as ALL } from './styles/index.ts';
 
 export interface Book {
@@ -18,7 +18,6 @@ export interface Book {
 export interface Options {
   style?: string; // id стиля вместо выбранного по автору
   variant?: number;
-  spine?: number; // ширина полосы корешка из 200 (0 или 34)
   age?: number; // 0…1 вместо выбранной
   id?: string; // приставка id внутри SVG
 }
@@ -47,8 +46,7 @@ export function drawCover(book: Book, opts: Options = {}): Cover {
   const r = rng(hash(key));
   const v0 = Math.floor(r() * style.variants.length);
   const v = opts.variant ?? v0;
-  const s0 = r() < (style.sp ?? 0.5) ? SPINE : 0;
-  const s = opts.spine ?? s0;
+  const s = r() < (style.sp ?? 0) ? SPINE : 0;
   const a0 = r() ** 1.6;
   const id = opts.id ?? 'p' + hash(key + style.id).toString(36);
   const L = s ? s + 12 : 16;
@@ -57,7 +55,7 @@ export function drawCover(book: Book, opts: Options = {}): Cover {
   const art = style.draw(c);
   const age = opts.age ?? a0 * (art.age ?? 0.3);
   const base = art.base ?? '#808080';
-  const body = art.svg + texture(id, art.tex ?? 'grain') + spine(c, art) + wear(c, age, base);
+  const body = art.svg + texture(id, art.tex ?? 'grain') + dress(c, art) + hinge(s) + wear(c, age, base);
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}">${body}</svg>`,
     style: style.name,
